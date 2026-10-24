@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: wasm-bindgen-cli installieren
+        run: |
+          VERSION="$(grep -oP 'wasm-bindgen = "=\K[0-9.]+' Cargo.toml)"
+          cargo install wasm-bindgen-cli --version "$VERSION" --locked
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: bash scripts/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pdf-webeditor-dist
+          path: dist/

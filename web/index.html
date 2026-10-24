@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF Webeditor</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #f4f4f5; font-family: system-ui, sans-serif; }
+    #app { display: block; width: 100%; height: 100%; }
+    #loading { position: absolute; inset: 0; display: grid; place-items: center; color: #444; }
+    #loading.error { color: #b00020; white-space: pre-wrap; padding: 16px; }
+  </style>
+</head>
+<body>
+  <canvas id="app"></canvas>
+  <div id="loading">PDF Webeditor wird geladen…</div>
+
+  <!-- Definiert PDFiumModule() (Emscripten, modularisiert); lädt pdfium.wasm aus demselben Ordner. -->
+  <script src="pdfium/pdfium.js"></script>
+  <script type="module">
+    import init, { initialize_pdfium_render, start } from "./pkg/pdf_webeditor.js";
+
+    const loading = document.getElementById("loading");
+    try {
+      // Beide WebAssembly-Module parallel laden: PDFium (C++) und unsere App (Rust).
+      const [pdfium, rust] = await Promise.all([PDFiumModule(), init()]);
+      // Brücke herstellen: pdfium-render ruft PDFium-Funktionen über dieses Modul-Objekt auf.
+      if (!initialize_pdfium_render(pdfium, rust, false)) {
+        throw new Error("initialize_pdfium_render ist fehlgeschlagen (Details in der Konsole)");
+      }
+      loading.remove();
+      await start("app");
+    } catch (e) {
+      console.error(e);
+      loading.classList.add("error");
+      loading.textContent = "Start fehlgeschlagen:\n" + e;
+    }
+  </script>
+</body>
+</html>
