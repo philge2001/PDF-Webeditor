@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # Fachlogik direkt aus dem Desktop-Projekt – eine Codebasis für beide Versionen.
 # Fester Commit, damit Builds reproduzierbar bleiben; bei Bedarf bewusst hochziehen.
-pdftool-core = { git = "https://github.com/philge2001/PDF-Tool", rev = "18bec9591914de45a4e60660e114ca92ab828d03" }
+pdftool-core = { git = "https://github.com/philge2001/PDF-Tool", rev = "e374ebb87cdd58b8abe3fe0f83a53828f25d9908" }
 # Gleiche Version wie im Desktop-Projekt; im Browser bindet sie sich an pdfium.wasm (siehe web/index.html).
 # Ohne `thread_safe`: im Browser gibt es (vorerst) nur einen Thread.
 pdfium-render = { version = "0.9.4", default-features = false, features = ["pdfium_latest"] }
@@ -30,8 +30,6 @@ wasm-bindgen = "=0.2.129"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlCanvasElement", "HtmlAnchorElement", "Blob", "BlobPropertyBag", "Url", "Performance"] }
-# Zufallszahlen kommen im Browser von crypto.getRandomValues (pdftool-core braucht sie für AES-256).
-getrandom = { version = "0.4", features = ["wasm_js"] }
 # Panics als lesbare Meldung in der Browser-Konsole; Logausgabe dorthin.
 console_error_panic_hook = "0.1"
 console_log = "1"
