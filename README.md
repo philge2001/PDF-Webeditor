@@ -3,11 +3,22 @@
 [PDF Tool](https://github.com/philge2001/PDF-Tool) als Webapp. Alles läuft **im Browser**
 (Rust → WebAssembly): PDFs verlassen den Rechner nicht, es gibt keinen Server.
 
-- Oberfläche: egui/eframe (wie die Desktop-App), gezeichnet in ein `<canvas>` (WebGL)
-- Fachlogik: `pdftool-core` direkt aus dem PDF-Tool-Repository (Git-Abhängigkeit, fester Commit)
+- Oberfläche: **dieselbe App wie auf dem Desktop** (`pdftool-app` aus dem PDF-Tool-Repository, egui im `<canvas>`)
 - Rendern: PDFium als WebAssembly ([pdfium-lib](https://github.com/paulocoutinhox/pdfium-lib)) über pdfium-render
 
-**Stand:** W1 – Kern plattformneutral, Speichern im Browser funktioniert (siehe unten).
+**Stand:** W3 – die Desktop-App läuft im Browser: Kommentieren (Notizen platzieren, Text eingeben, verschieben),
+Markieren, Freitext, Zeichnen, Suche, Seiten organisieren, Formulare, Schwärzen, Text/Bilder bearbeiten,
+Export, Komprimieren, PDF/A, Signieren (ohne Zeitstempel), Barrierefreiheit. Noch nicht: Texterkennung (W6).
+
+### Unterschiede zur Desktop-App
+- **Öffnen:** „Datei öffnen“ oder PDF ins Fenster ziehen. Die Datei bleibt im Browser, nichts wird hochgeladen.
+- **Speichern:** Strg+S bzw. „Speichern“ lädt die Datei herunter (Downloads-Ordner). Es gibt keinen Speichern-Dialog;
+  mehrere Dateien (Teilen, Bilder-Export) kommen als einzelne Downloads.
+- **Zuletzt verwendet:** nur Dateien der aktuellen Sitzung (nach dem Neuladen der Seite ist die Liste leer).
+- **Hintergrund-Arbeit** (Komprimieren, PDF/A, Export, Signieren) läuft im Browser ohne eigenen Thread – die
+  Oberfläche hält währenddessen kurz an.
+- **Nicht verfügbar:** Texterkennung (OCR), Zeitstempeldienste beim Signieren, Systemschriften.
+- Ungespeicherte Änderungen gehen beim Schließen des Browser-Tabs ohne Rückfrage verloren.
 
 ## Bauen und starten
 
@@ -36,10 +47,18 @@ python3 -m http.server 8080 -d dist
 # Browser: http://localhost:8080
 ```
 
-Bedienung: „PDF öffnen…“, „Beispiel-PDF“ oder eine PDF ins Fenster ziehen; Seiten mit ◀ ▶,
-Zoom per Schieberegler. „Notiz einfügen“ setzt eine Notiz in die Seitenmitte, „Speichern (Download)“ speichert
-inkrementell und bietet die Datei zum Herunterladen an. Ungespeicherte Notizen sieht man sofort: PDFium rendert
-dafür den aktuellen Stand aus `Document::render_snapshot`. Rechts stehen die Messwerte.
+## W3 – Desktop-App im Browser
+
+In PDF-Tool (Branch `web-w3-app`): Die App ist zusätzlich eine Bibliothek (`pdftool_app`). Alles, was zwischen
+Desktop und Browser verschieden ist, steckt im Modul `app::platform` (Dateidialoge, Lesen/Schreiben,
+Hintergrund-Arbeit). Der Render-Worker läuft im Browser ohne Thread in Zeitscheiben pro Frame.
+Dieses Repository startet nur noch `PdfToolApp` im Canvas (`src/lib.rs`).
+
+Getestet in Chromium: Öffnen (Dialog), Notiz platzieren + Text (mit Umlauten) + verschieben, Kommentar-Panel,
+Markieren, Freitext, Seitenminiaturen, Suche, PDF/A, Export (PNG je Seite, Word), Speichern als Download
+(inkrementell, Notiztext in der Datei).
+
+Ladegröße: App-WASM 22 MB (gzip 6,9 MB) + pdfium.wasm 5,2 MB (gzip 2,4 MB). Verkleinern ist Teil von W4.
 
 ## W1 – Plattformneutraler Kern
 

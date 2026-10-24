@@ -15,28 +15,26 @@ python3 -m http.server 8080 -d dist
 wasm-bindgen-cli muss exakt zur `wasm-bindgen`-Version in Cargo.toml passen (build.sh prüft das).
 
 ## Architektur
-- `pdftool-core` kommt per Git-Abhängigkeit (fester `rev`) aus PDF-Tool. Änderungen an core gehören nach PDF-Tool,
-  danach `rev` hier hochziehen. Lokal testen: `[patch."https://github.com/philge2001/PDF-Tool"]` mit `path`
-  (nicht committen).
+- Die App selbst ist `pdftool-app` (Git-Abhängigkeit mit festem `rev`, `default-features = false` = ohne OCR) aus
+  PDF-Tool. Funktionen/Fehlerbehebungen gehören nach PDF-Tool (Browser-Regeln: dort CLAUDE.md, Modul `app::platform`),
+  danach `rev` hier hochziehen. Lokal testen: `[patch."https://github.com/philge2001/PDF-Tool"]` mit `path` für
+  pdftool-app, -core, -render, -sign (nicht committen).
 - `web/index.html` lädt `pdfium/pdfium.js` (`PDFiumModule()`, Emscripten modularisiert) und `pkg/pdf_webeditor.js`
   (wasm-bindgen), ruft `initialize_pdfium_render(pdfium, rust, false)` und dann `start("app")`.
-- `src/pdf.rs` – `Renderer` (PDFium, `&'static Pdfium` per `Box::leak`, Dokument als `PdfDocument<'static>`)
-- `src/app.rs` – egui-Oberfläche (`eframe::App::ui`, egui 0.37: `egui::Panel::top/right`)
-- `src/browser.rs` – `now_ms` (performance.now), `download` (Blob-URL)
-- Kein `std::time::{Instant, SystemTime}::now()` (Systemzeit: `pdftool_core::date::system_now()`), kein `std::fs`,
-  kein `std::thread` im Browser-Code.
+- `src/lib.rs` – `start(canvas_id)`: Panic-Hook, tracing → Browser-Konsole (tracing-wasm), `eframe::WebRunner` mit
+  `PdfToolApp::new(cc, Vec::new(), None)`. Mehr Code gibt es hier nicht.
 
 ## Abhängigkeiten
 Wie in PDF-Tool: keine AGPL, jede neue Crate mit einem Satz begründen.
-- pdfium-render 0.9.4 (ohne `thread_safe`), eframe 0.37 (glow), rfd 0.17 (AsyncFileDialog), wasm-bindgen =0.2.129,
-  web-sys/js-sys, console_error_panic_hook, console_log (getrandom-Features für wasm32 bringt pdftool-core selbst mit)
+- pdftool-app (Git), eframe 0.37 (glow, persistence), wasm-bindgen =0.2.129, wasm-bindgen-futures, web-sys,
+  console_error_panic_hook, tracing-wasm (Logs in die Browser-Konsole)
 - PDFium-WASM: paulocoutinhox/pdfium-lib 7902 (MIT-Build-Skripte, PDFium BSD), per `scripts/fetch-pdfium.sh`
 
 ## Meilensteine
 - [x] W0 Machbarkeitstest (Öffnen, Rendern, core lesen, Notiz-Command; Speichern lokal mit web-time erprobt)
 - [x] W1 Plattformneutraler Kern (PDF-Tool `core::date::system_now` über web-time, getrandom-Features, CI-Job `wasm`; Speichern als Download)
 - [ ] W2 Rendern im Web Worker
-- [ ] W3 App-Shell im Web (Desktop-UI übernehmen, Speichern/File System Access, Tabs)
+- [x] W3 Desktop-App im Browser (PDF-Tool `web-w3-app`: `pdftool_app`-Bibliothek, `app::platform`, Render-Worker ohne Thread)
 - [ ] W4 Schriften und Bilder (Schriften nachladen, Zwischenablage)
 - [ ] W5 Signaturen (.p12 im Browser, TSA-Proxy optional)
 - [ ] W6 OCR (tesseract.js)
@@ -46,4 +44,7 @@ Wie in PDF-Tool: keine AGPL, jede neue Crate mit einem Satz begründen.
 ## Testen im Container
 `python3 -m http.server 8765 -d dist` und Playwright (Chromium vorinstalliert,
 `chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] })`); egui zeichnet in ein Canvas,
-also per Koordinate klicken und Screenshots ansehen. Dateidialog: `page.waitForEvent('filechooser')` → `setFiles`.
+also per Koordinate klicken und Screenshots ansehen. Dateidialog: `page.waitForEvent('filechooser')` → `setFiles`;
+Downloads: `page.on('download', d => d.saveAs(...))`, Kontext mit `acceptDownloads: true`.
+Webserver mit `--directory` starten (build.sh löscht und erzeugt `dist/` neu). Nicht `pkill -f http.server` im
+selben Befehl wie den Serverstart (trifft die eigene Shell).
