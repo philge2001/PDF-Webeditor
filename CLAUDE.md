@@ -7,6 +7,7 @@ kommentieren, nach jedem Meilenstein eine Test-Anleitung geben.
 ## Build
 ```bash
 bash scripts/build.sh [--debug]                  # → dist/ (lädt PDFium nach vendor/)
+# Windows: powershell -ExecutionPolicy Bypass -File scripts\build.ps1 [-Dev] [-Serve]  (UTF-8 mit BOM, CRLF, PS 5.1)
 cargo clippy --all-targets -- -D warnings          # Ziel wasm32 ist in .cargo/config.toml voreingestellt
 cargo fmt
 python3 -m http.server 8080 -d dist

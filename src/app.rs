@@ -182,8 +182,10 @@ impl WebApp {
                     .custom_formatter(|v, _| format!("{:.0} %", v * 100.0)),
             );
             ui.separator();
-            if ui.button("Notiz einfügen").clicked() {
-                add_note(doc);
+            if ui.button("Notiz einfügen").clicked() && add_note(doc) {
+                if let Err(e) = show_unsaved_changes(doc, &mut self.renderer) {
+                    self.message = Some(e);
+                }
             }
             let dirty = doc.doc.is_dirty();
             if ui
@@ -311,13 +313,33 @@ impl WebApp {
     }
 }
 
+/// Lässt PDFium den aktuellen Stand samt ungespeicherter Änderungen rendern.
+///
+/// PDFium kennt nur Dateibytes. `render_snapshot` liefert die Bytes so, wie sie beim Speichern
+/// entstünden – ohne etwas zu speichern. (Die Desktop-App zeichnet Annotationen stattdessen selbst
+/// über die Seite; das kommt hier mit W3. Die Ausblendliste `hidden` brauchen wir deshalb noch nicht.)
+fn show_unsaved_changes(
+    doc: &mut OpenDoc,
+    renderer: &mut Result<Renderer, String>,
+) -> Result<(), String> {
+    let renderer = renderer.as_mut().map_err(|e| e.clone())?;
+    let snapshot = doc
+        .doc
+        .render_snapshot()
+        .map_err(|e| format!("Vorschau fehlgeschlagen: {e}"))?;
+    renderer.load(snapshot.bytes)?;
+    doc.texture = None; // erzwingt neues Rendern der Seite
+    Ok(())
+}
+
 /// Fügt eine Notiz in der Mitte der aktuellen Seite ein (über ein `Command` → Undo-fähig).
-fn add_note(doc: &mut OpenDoc) {
+/// Liefert `true`, wenn sie eingefügt wurde.
+fn add_note(doc: &mut OpenDoc) -> bool {
     use pdftool_core::geometry::{Color, Point};
     use pdftool_core::{AddAnnotation, AnnotKind, Annotation};
 
     let Ok(info) = doc.doc.page(doc.page) else {
-        return;
+        return false;
     };
     let b = info.crop_box;
     let pos = Point::new((b.x0 + b.x1) / 2.0, (b.y0 + b.y1) / 2.0);
@@ -328,8 +350,12 @@ fn add_note(doc: &mut OpenDoc) {
     // Seit W1 funktioniert die Systemzeit von core auch im Browser (web-time); /NM vergibt
     // core beim Speichern selbst.
     a.modified = pdftool_core::date::pdf_date_now();
-    if let Err(e) = doc.doc.execute(Box::new(AddAnnotation::new(a))) {
-        log::error!("Notiz einfügen fehlgeschlagen: {e}");
+    match doc.doc.execute(Box::new(AddAnnotation::new(a))) {
+        Ok(()) => true,
+        Err(e) => {
+            log::error!("Notiz einfügen fehlgeschlagen: {e}");
+            false
+        }
     }
 }
 

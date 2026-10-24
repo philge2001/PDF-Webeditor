@@ -17,7 +17,14 @@ rustup target add wasm32-unknown-unknown
 cargo install wasm-bindgen-cli --version 0.2.129 --locked   # muss zu Cargo.toml passen
 ```
 
-Bauen (lädt PDFium beim ersten Mal nach `vendor/`):
+**Windows (PowerShell):** Befehle einzeln eingeben – Windows PowerShell 5.1 kennt `&&` nicht. Statt `build.sh`:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Serve     # bauen und auf http://localhost:8080 starten
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Dev       # schneller Debug-Build, ohne Start
+```
+(`-Serve` braucht Python; ohne Python: `npx --yes http-server dist -p 8080`.)
+
+**Linux/macOS/Git Bash** – bauen (lädt PDFium beim ersten Mal nach `vendor/`):
 ```bash
 bash scripts/build.sh            # Release, ~2 min
 bash scripts/build.sh --debug    # schneller gebaut, deutlich größer
@@ -31,7 +38,8 @@ python3 -m http.server 8080 -d dist
 
 Bedienung: „PDF öffnen…“, „Beispiel-PDF“ oder eine PDF ins Fenster ziehen; Seiten mit ◀ ▶,
 Zoom per Schieberegler. „Notiz einfügen“ setzt eine Notiz in die Seitenmitte, „Speichern (Download)“ speichert
-inkrementell und bietet die Datei zum Herunterladen an. Rechts stehen die Messwerte.
+inkrementell und bietet die Datei zum Herunterladen an. Ungespeicherte Notizen sieht man sofort: PDFium rendert
+dafür den aktuellen Stand aus `Document::render_snapshot`. Rechts stehen die Messwerte.
 
 ## W1 – Plattformneutraler Kern
 
