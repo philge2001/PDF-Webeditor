@@ -7,7 +7,7 @@
 - Fachlogik: `pdftool-core` direkt aus dem PDF-Tool-Repository (Git-Abhängigkeit, fester Commit)
 - Rendern: PDFium als WebAssembly ([pdfium-lib](https://github.com/paulocoutinhox/pdfium-lib)) über pdfium-render
 
-**Stand:** W0 – Machbarkeitstest abgeschlossen (siehe unten).
+**Stand:** W1 – Kern plattformneutral, Speichern im Browser funktioniert (siehe unten).
 
 ## Bauen und starten
 
@@ -30,7 +30,19 @@ python3 -m http.server 8080 -d dist
 ```
 
 Bedienung: „PDF öffnen…“, „Beispiel-PDF“ oder eine PDF ins Fenster ziehen; Seiten mit ◀ ▶,
-Zoom per Schieberegler. Rechts stehen die Messwerte des Machbarkeitstests.
+Zoom per Schieberegler. „Notiz einfügen“ setzt eine Notiz in die Seitenmitte, „Speichern (Download)“ speichert
+inkrementell und bietet die Datei zum Herunterladen an. Rechts stehen die Messwerte.
+
+## W1 – Plattformneutraler Kern
+
+In PDF-Tool (Branch `web-w1-plattformneutral`): `core::date::system_now()` liefert die Systemzeit über die Crate
+`web-time` – im Browser aus `Date.now()`, auf dem Desktop unverändert `SystemTime::now()`. Zufall kommt im Browser
+aus `crypto.getRandomValues` (getrandom-Features in core/sign). Ein CI-Job prüft, dass core und sign für wasm32
+kompilieren und niemand `SystemTime::now()` direkt aufruft. Dateisystem-Funktionen (`Document::open`, Systemschriften)
+liefern im Browser nur Fehler, stürzen aber nicht ab – genutzt werden dort die Bytes-Varianten.
+
+Getestet in Chromium: 500-Seiten-PDF, Notiz auf Seite 4, speichern, erneut Notiz, erneut speichern → zwei
+inkrementelle Revisionen, beide Notizen mit Datum und `/NM`, Datei gültig (`pdfinfo`, `pdftoppm`).
 
 ## W0 – Ergebnis des Machbarkeitstests
 
@@ -42,7 +54,7 @@ Getestet in Chromium (headless, Software-WebGL) mit einer 500-seitigen Text-PDF 
 | Läuft PDFium im Browser? | **Ja**, mit pdfium-lib 7902. Öffnen 3–11 ms, Rendern A4: ~20 ms (100 %) bis ~90 ms (400 %, 2384 × 3372 px), im Hauptthread. |
 | egui im Browser? | **Ja**, Start der Seite ~0,4 s (lokal). Dateidialog und Drag & Drop liefern die Bytes. |
 | Annotation anlegen (Command)? | **Ja**, über `AddAnnotation` wie in der Desktop-App. |
-| Speichern? | **Noch nicht** – `pdftool-core` ruft `SystemTime::now()` auf, das in `wasm32-unknown-unknown` abstürzt. Mit `web-time` in core (lokal erprobt) klappt es: inkrementell gespeichert, als Download angeboten, Datei gültig (`pdfinfo`). Der Knopf bleibt bis W1 gesperrt (`SAVE_SUPPORTED` in `src/app.rs`). |
+| Speichern? | In W0 nicht – `pdftool-core` rief `SystemTime::now()` auf, das in `wasm32-unknown-unknown` abstürzt. **Seit W1 behoben.** |
 | Ladegröße | App-WASM 10,7 MB (gzip 2,7 MB), davon ~4,7 MB eingebaute Schriften/ICC aus core; pdfium.wasm 5,2 MB (gzip 2,4 MB). Zusammen ~5,2 MB gzip. |
 
 Erkenntnisse für die nächsten Schritte:

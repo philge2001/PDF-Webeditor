@@ -9,11 +9,6 @@ use pdftool_core::Document;
 use crate::browser;
 use crate::pdf::Renderer;
 
-/// Speichern ruft in pdftool-core `SystemTime::now()` auf – das gibt es in
-/// `wasm32-unknown-unknown` nicht (Absturz „time not implemented on this platform“).
-/// Mit `web-time` in core (W1) funktioniert es; im Test mit lokal geänderter core erprobt.
-const SAVE_SUPPORTED: bool = false;
-
 /// Eine vom Browser gelieferte Datei (Dateidialog oder Drag & Drop).
 struct IncomingFile {
     name: String,
@@ -192,15 +187,8 @@ impl WebApp {
             }
             let dirty = doc.doc.is_dirty();
             if ui
-                .add_enabled(
-                    SAVE_SUPPORTED && dirty,
-                    egui::Button::new("Speichern (Download)"),
-                )
-                .on_disabled_hover_text(if SAVE_SUPPORTED {
-                    "Keine Änderungen"
-                } else {
-                    "Ab W1: pdftool-core nutzt beim Speichern noch die Systemzeit"
-                })
+                .add_enabled(dirty, egui::Button::new("Speichern (Download)"))
+                .on_disabled_hover_text("Keine Änderungen")
                 .clicked()
             {
                 self.save_download();
@@ -215,6 +203,7 @@ impl WebApp {
             return;
         };
         let name = doc.name.clone();
+        let page = doc.page;
         let result = doc
             .doc
             .to_bytes()
@@ -225,7 +214,13 @@ impl WebApp {
                 Ok(bytes)
             });
         match result {
-            Ok(bytes) => self.open(IncomingFile { name, bytes }),
+            Ok(bytes) => {
+                self.open(IncomingFile { name, bytes });
+                // Nach dem Neuladen auf derselben Seite bleiben.
+                if let Some(doc) = &mut self.doc {
+                    doc.page = page.min(doc.doc.page_count().saturating_sub(1));
+                }
+            }
             Err(e) => self.message = Some(e),
         }
     }
@@ -330,10 +325,9 @@ fn add_note(doc: &mut OpenDoc) {
     a.id = doc.doc.allocate_annotation_id();
     a.author = "PDF Webeditor".into();
     a.contents = "Notiz aus dem Browser".into();
-    // Datum und /NM selbst setzen: `pdf_date_now()` in core nutzt `SystemTime` (siehe README).
-    let secs = browser::unix_secs();
-    a.modified = pdftool_core::date::pdf_date_from_unix(secs);
-    a.name = format!("pdfwebeditor-{secs:x}-{}", a.id.0);
+    // Seit W1 funktioniert die Systemzeit von core auch im Browser (web-time); /NM vergibt
+    // core beim Speichern selbst.
+    a.modified = pdftool_core::date::pdf_date_now();
     if let Err(e) = doc.doc.execute(Box::new(AddAnnotation::new(a))) {
         log::error!("Notiz einfügen fehlgeschlagen: {e}");
     }

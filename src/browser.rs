@@ -12,11 +12,6 @@ pub fn now_ms() -> f64 {
         .unwrap_or(0.0)
 }
 
-/// Sekunden seit 1970 (für PDF-Datumsangaben); ersetzt `SystemTime::now()`.
-pub fn unix_secs() -> i64 {
-    (js_sys::Date::now() / 1000.0) as i64
-}
-
 /// Bietet `bytes` als Datei-Download an (Blob-URL + unsichtbarer Link).
 pub fn download(file_name: &str, bytes: &[u8]) -> Result<(), JsValue> {
     use wasm_bindgen::JsCast;
