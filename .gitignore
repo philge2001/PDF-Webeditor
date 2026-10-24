@@ -1,3 +1,6 @@
 /target
 /dist
 /vendor
+/tests/e2e/node_modules
+/tests/e2e/*.png
+/tests/e2e/dl_*

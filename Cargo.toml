@@ -15,7 +15,7 @@ crate-type = ["cdylib", "rlib"]
 # Die komplette Oberfläche aus dem Desktop-Projekt (eine Codebasis für beide Versionen),
 # ohne Texterkennung (Tesseract lässt sich nicht für den Browser bauen, siehe W6).
 # Fester Commit, damit Builds reproduzierbar bleiben; bei Bedarf bewusst hochziehen.
-pdftool-app = { git = "https://github.com/philge2001/PDF-Tool", rev = "b8891838ee884a26a8c343127f7d221a3ad86e3a", default-features = false }
+pdftool-app = { git = "https://github.com/philge2001/PDF-Tool", rev = "64b9937316a35251c38ee69463b8338eee8823c7", default-features = false }
 # egui im Browser (WebGL über glow), dieselbe Version wie die Desktop-App.
 eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "persistence"] }
 
@@ -35,9 +35,18 @@ unsafe_code = "forbid"
 [lints.clippy]
 all = { level = "warn", priority = -1 }
 
+[profile.dev]
+# Volle Debug-Infos machen das WebAssembly ~380 MB groß – das verarbeitet wasm-bindgen nicht.
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+# Abhängigkeiten auch im Debug-Build optimieren (kleiner und deutlich schneller im Browser).
+opt-level = 1
+
 [profile.release]
 # Kleineres WebAssembly: weniger Ladezeit im Browser.
 opt-level = "s"
 lto = true
 codegen-units = 1
+
 

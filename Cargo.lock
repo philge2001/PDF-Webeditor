@@ -3089,7 +3089,7 @@ dependencies = [
 [[package]]
 name = "pdftool-app"
 version = "0.1.1"
-source = "git+https://github.com/philge2001/PDF-Tool?rev=b8891838ee884a26a8c343127f7d221a3ad86e3a#b8891838ee884a26a8c343127f7d221a3ad86e3a"
+source = "git+https://github.com/philge2001/PDF-Tool?rev=64b9937316a35251c38ee69463b8338eee8823c7#64b9937316a35251c38ee69463b8338eee8823c7"
 dependencies = [
  "anyhow",
  "der",
@@ -3112,7 +3112,7 @@ dependencies = [
 [[package]]
 name = "pdftool-core"
 version = "0.1.1"
-source = "git+https://github.com/philge2001/PDF-Tool?rev=b8891838ee884a26a8c343127f7d221a3ad86e3a#b8891838ee884a26a8c343127f7d221a3ad86e3a"
+source = "git+https://github.com/philge2001/PDF-Tool?rev=64b9937316a35251c38ee69463b8338eee8823c7#64b9937316a35251c38ee69463b8338eee8823c7"
 dependencies = [
  "getrandom 0.4.3",
  "jpeg-encoder",
@@ -3131,7 +3131,7 @@ dependencies = [
 [[package]]
 name = "pdftool-render"
 version = "0.1.1"
-source = "git+https://github.com/philge2001/PDF-Tool?rev=b8891838ee884a26a8c343127f7d221a3ad86e3a#b8891838ee884a26a8c343127f7d221a3ad86e3a"
+source = "git+https://github.com/philge2001/PDF-Tool?rev=64b9937316a35251c38ee69463b8338eee8823c7#64b9937316a35251c38ee69463b8338eee8823c7"
 dependencies = [
  "pdfium-render",
  "pdftool-core",
@@ -3143,7 +3143,7 @@ dependencies = [
 [[package]]
 name = "pdftool-sign"
 version = "0.1.1"
-source = "git+https://github.com/philge2001/PDF-Tool?rev=b8891838ee884a26a8c343127f7d221a3ad86e3a#b8891838ee884a26a8c343127f7d221a3ad86e3a"
+source = "git+https://github.com/philge2001/PDF-Tool?rev=64b9937316a35251c38ee69463b8338eee8823c7#64b9937316a35251c38ee69463b8338eee8823c7"
 dependencies = [
  "cms",
  "der",
@@ -4058,6 +4058,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2f8bec09ae8fae0f4f265a4559a9334be3929d8504e9b536df0a41302bd1733"
 dependencies = [
  "bstr",
+ "web-time",
 ]
 
 [[package]]

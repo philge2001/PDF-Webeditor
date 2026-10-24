@@ -15,10 +15,11 @@ Export, Komprimieren, PDF/A, Signieren (ohne Zeitstempel), Barrierefreiheit. Noc
 - **Speichern:** Strg+S bzw. „Speichern“ lädt die Datei herunter (Downloads-Ordner). Es gibt keinen Speichern-Dialog;
   mehrere Dateien (Teilen, Bilder-Export) kommen als einzelne Downloads.
 - **Zuletzt verwendet:** nur Dateien der aktuellen Sitzung (nach dem Neuladen der Seite ist die Liste leer).
+  Einstellungen (Design, Autor, vertraute Zertifikate …) bleiben dagegen im Browser gespeichert.
 - **Hintergrund-Arbeit** (Komprimieren, PDF/A, Export, Signieren) läuft im Browser ohne eigenen Thread – die
   Oberfläche hält währenddessen kurz an.
 - **Nicht verfügbar:** Texterkennung (OCR), Zeitstempeldienste beim Signieren, Systemschriften.
-- Ungespeicherte Änderungen gehen beim Schließen des Browser-Tabs ohne Rückfrage verloren.
+- Schließen oder Neuladen des Tabs mit ungespeicherten Änderungen: Der Browser fragt nach („Seite verlassen?“).
 
 ## Bauen und starten
 
@@ -70,6 +71,19 @@ liefern im Browser nur Fehler, stürzen aber nicht ab – genutzt werden dort di
 
 Getestet in Chromium: 500-Seiten-PDF, Notiz auf Seite 4, speichern, erneut Notiz, erneut speichern → zwei
 inkrementelle Revisionen, beide Notizen mit Datum und `/NM`, Datei gültig (`pdfinfo`, `pdftoppm`).
+
+## Durchgetestet im Browser
+
+Mit `tests/e2e/drive.js` in Chromium durchgeklickt und die Ergebnisdateien mit poppler (`pdfinfo`, `pdftotext`,
+`pdfimages`, `pdfsig`) geprüft: Kommentieren (Notiz, Markieren, Freitext), Formulare ausfüllen und gestalten,
+Seiten drehen/einfügen/löschen/extrahieren/teilen, Zusammenführen, Schwärzen (Text wirklich entfernt), Passwortschutz
+(AES-256, Öffnen mit Passwort), Komprimieren, PDF/A, Export (PNG, Word), Text und Bilder bearbeiten, Bild per Strg+V,
+Testzertifikat erstellen und signieren (`pdfsig`: gültig), Vergleich, Barrierefreiheit prüfen und taggen,
+Lesezeichen, Suche, Einstellungen nach Neuladen.
+
+Dabei behoben (in PDF-Tool): Absturz beim Testzertifikat (versteckter `SystemTime::now()` in x509-cert),
+unsichtbare Eingabefelder im hellen Design, Strg+V mit Bild, Rückfrage beim Schließen, Meldungen mit leerem
+Ordnernamen; hier: Debug-Build (`--debug`/`-Dev`) war für wasm-bindgen zu groß.
 
 ## W0 – Ergebnis des Machbarkeitstests
 

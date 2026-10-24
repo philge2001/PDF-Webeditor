@@ -41,6 +41,10 @@ Wie in PDF-Tool: keine AGPL, jede neue Crate mit einem Satz begründen.
 - [ ] W7 PWA und Veröffentlichung
 - [ ] W8 Tests (wasm-bindgen-test, Playwright)
 
+## Testen
+`tests/e2e/drive.js` (Playwright) spielt Aktionen per Koordinate ab, siehe `tests/e2e/README.md`.
+Nach Änderungen an PDF-Tool die betroffenen Abläufe damit erneut durchklicken und Ergebnisdateien mit poppler prüfen.
+
 ## Testen im Container
 `python3 -m http.server 8765 -d dist` und Playwright (Chromium vorinstalliert,
 `chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] })`); egui zeichnet in ein Canvas,
