@@ -18,12 +18,17 @@
   <!-- Definiert PDFiumModule() (Emscripten, modularisiert); lädt pdfium.wasm aus demselben Ordner. -->
   <script src="pdfium/pdfium.js"></script>
   <script type="module">
-    import init, { initialize_pdfium_render, start } from "./pkg/pdf_webeditor.js";
+    // Den Platzhalter hinter ?v= ersetzt das Build-Skript durch „PDF-Tool-rev-Uhrzeit“. So lädt der
+    // Browser nach jedem Build die neue App statt einer zwischengespeicherten alten.
+    import init, { initialize_pdfium_render, start } from "./pkg/pdf_webeditor.js?v=__BUILD__";
+    console.info("PDF Webeditor, Build __BUILD__");
 
     const loading = document.getElementById("loading");
     try {
       // Beide WebAssembly-Module parallel laden: PDFium (C++) und unsere App (Rust).
-      const [pdfium, rust] = await Promise.all([PDFiumModule(), init()]);
+      const [pdfium, rust] = await Promise.all([PDFiumModule(),
+        init({ module_or_path: "./pkg/pdf_webeditor_bg.wasm?v=__BUILD__" }),
+      ]);
       // Brücke herstellen: pdfium-render ruft PDFium-Funktionen über dieses Modul-Objekt auf.
       if (!initialize_pdfium_render(pdfium, rust, false)) {
         throw new Error("initialize_pdfium_render ist fehlgeschlagen (Details in der Konsole)");

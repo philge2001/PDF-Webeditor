@@ -39,11 +39,14 @@ if [[ "$PROFILE" == release ]] && command -v wasm-opt >/dev/null; then
     --enable-mutable-globals --enable-reference-types --enable-multivalue \
     dist/pkg/pdf_webeditor_bg.wasm -o dist/pkg/pdf_webeditor_bg.wasm
 fi
-cp web/index.html dist/
+# Build-Kennung (gepinnter PDF-Tool-Stand + Uhrzeit) gegen veraltete Dateien im Browser-Cache.
+BUILD="$(grep -oP 'PDF-Tool", rev = "\K[0-9a-f]{7}' Cargo.toml)-$(date +%Y%m%d%H%M%S)"
+sed "s/__BUILD__/$BUILD/g" web/index.html > dist/index.html
 cp vendor/pdfium/pdfium.js vendor/pdfium/pdfium.wasm dist/pdfium/
 cp -r vendor/pdfium/licenses dist/pdfium/
 mkdir -p dist/fonts
 cp vendor/fonts/*.ttf vendor/fonts/*.txt dist/fonts/
 
+echo "Build $BUILD"
 echo "Fertig: dist/ ($(du -sh dist | cut -f1))"
 du -h dist/pkg/*.wasm dist/pdfium/pdfium.wasm

@@ -52,6 +52,9 @@ Starten (jeder statische Webserver geht; `file://` nicht, wegen WebAssembly):
 python3 -m http.server 8080 -d dist
 # Browser: http://localhost:8080
 ```
+Jeder Build hängt eine Kennung (`?v=<PDF-Tool-Stand>-<Uhrzeit>`) an die App-Dateien, damit der Browser nach
+einem neuen Build nicht die alte Fassung aus dem Zwischenspeicher nimmt. Welche Fassung läuft, steht in der
+Browser-Konsole (F12): „PDF Webeditor, Build …“.
 
 ## W4 – Schriften und Ladegröße
 

@@ -121,7 +121,10 @@ if (-not $Dev -and (Get-Command "wasm-opt" -ErrorAction SilentlyContinue)) {
     Invoke-Tool "wasm-opt" @("-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int", "--enable-sign-ext",
         "--enable-mutable-globals", "--enable-reference-types", "--enable-multivalue", $Opt, "-o", $Opt)
 }
-Copy-Item (Join-Path $Root "web\index.html") $Dist
+# Build-Kennung (gepinnter PDF-Tool-Stand + Uhrzeit) gegen veraltete Dateien im Browser-Cache.
+$Build = $Rev.Substring(0, 7) + "-" + (Get-Date -Format "yyyyMMddHHmmss")
+$Html = [System.IO.File]::ReadAllText((Join-Path $Root "web\index.html")).Replace("__BUILD__", $Build)
+[System.IO.File]::WriteAllText((Join-Path $Dist "index.html"), $Html, (New-Object System.Text.UTF8Encoding $false))
 Copy-Item (Join-Path $Vendor "pdfium.js") (Join-Path $Dist "pdfium")
 Copy-Item (Join-Path $Vendor "pdfium.wasm") (Join-Path $Dist "pdfium")
 Copy-Item -Recurse (Join-Path $Vendor "licenses") (Join-Path $Dist "pdfium")
@@ -130,6 +133,7 @@ Copy-Item (Join-Path $Fonts "*.ttf") (Join-Path $Dist "fonts")
 Copy-Item (Join-Path $Fonts "*.txt") (Join-Path $Dist "fonts")
 
 $SizeMb = [math]::Round(((Get-ChildItem -Recurse $Dist | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
+Write-Host "Build $Build"
 Write-Host "Fertig: dist\ ($SizeMb MB)"
 
 # --- optional: lokal starten (Python: „python“ oder der Launcher „py“) ---
