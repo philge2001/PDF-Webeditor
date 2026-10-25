@@ -79,6 +79,28 @@ if ((Test-Path (Join-Path $Vendor "pdfium.wasm")) -and (Test-Path $VersionFile) 
     }
 }
 
+# --- Liberation-Schriften (werden im Browser nachgeladen), wie scripts/fetch-fonts.sh ---
+$Rev = (Select-String -Path "Cargo.toml" -Pattern 'PDF-Tool", rev = "([0-9a-f]+)"').Matches[0].Groups[1].Value
+$Fonts = Join-Path $Root "vendor\fonts"
+$FontRevFile = Join-Path $Fonts "REV"
+if ((Test-Path $FontRevFile) -and ((Get-Content $FontRevFile -Raw).Trim() -eq $Rev)) {
+    Write-Host "Schriften (PDF-Tool $Rev) liegen schon in $Fonts"
+} else {
+    if (Test-Path $Fonts) { Remove-Item -Recurse -Force $Fonts }
+    New-Item -ItemType Directory -Force $Fonts | Out-Null
+    $Base = "https://raw.githubusercontent.com/philge2001/PDF-Tool/$Rev/assets/fonts"
+    foreach ($n in @("Sans", "Serif", "Mono")) {
+        foreach ($st in @("Regular", "Bold", "Italic", "BoldItalic")) {
+            $f = "Liberation$n-$st.ttf"
+            Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", (Join-Path $Fonts $f), "$Base/liberation/$f")
+        }
+    }
+    Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", (Join-Path $Fonts "COPYRIGHT-Liberation.txt"), "$Base/liberation/COPYRIGHT")
+    Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", (Join-Path $Fonts "OFL.txt"), "$Base/OFL.txt")
+    Set-Content -Path $FontRevFile -Value $Rev -Encoding ASCII
+    Write-Host "Liberation-Schriften (PDF-Tool $Rev) nach $Fonts geladen"
+}
+
 # --- Rust → WebAssembly ---
 $BuildProfile = if ($Dev) { "debug" } else { "release" }
 $CargoArgs = @("build", "--target", "wasm32-unknown-unknown")
@@ -92,10 +114,20 @@ New-Item -ItemType Directory -Force (Join-Path $Dist "pkg") | Out-Null
 New-Item -ItemType Directory -Force (Join-Path $Dist "pdfium") | Out-Null
 $Wasm = Join-Path $Root "target\wasm32-unknown-unknown\$BuildProfile\pdf_webeditor.wasm"
 Invoke-Tool "wasm-bindgen" @("--target", "web", "--no-typescript", "--out-dir", (Join-Path $Dist "pkg"), $Wasm)
+# Optional (Release): wasm-opt aus binaryen verkleinert das WebAssembly um rund ein Drittel.
+if (-not $Dev -and (Get-Command "wasm-opt" -ErrorAction SilentlyContinue)) {
+    $Opt = Join-Path $Dist "pkg\pdf_webeditor_bg.wasm"
+    Write-Host "wasm-opt -Oz …"
+    Invoke-Tool "wasm-opt" @("-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int", "--enable-sign-ext",
+        "--enable-mutable-globals", "--enable-reference-types", "--enable-multivalue", $Opt, "-o", $Opt)
+}
 Copy-Item (Join-Path $Root "web\index.html") $Dist
 Copy-Item (Join-Path $Vendor "pdfium.js") (Join-Path $Dist "pdfium")
 Copy-Item (Join-Path $Vendor "pdfium.wasm") (Join-Path $Dist "pdfium")
 Copy-Item -Recurse (Join-Path $Vendor "licenses") (Join-Path $Dist "pdfium")
+New-Item -ItemType Directory -Force (Join-Path $Dist "fonts") | Out-Null
+Copy-Item (Join-Path $Fonts "*.ttf") (Join-Path $Dist "fonts")
+Copy-Item (Join-Path $Fonts "*.txt") (Join-Path $Dist "fonts")
 
 $SizeMb = [math]::Round(((Get-ChildItem -Recurse $Dist | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
 Write-Host "Fertig: dist\ ($SizeMb MB)"

@@ -24,15 +24,26 @@ if [[ "$WANT" != "$HAVE" ]]; then
 fi
 
 bash scripts/fetch-pdfium.sh
+bash scripts/fetch-fonts.sh
 cargo build "${CARGO_FLAGS[@]}" --target wasm32-unknown-unknown
 
 rm -rf dist
 mkdir -p dist/pkg dist/pdfium
 wasm-bindgen --target web --no-typescript --out-dir dist/pkg \
   "target/wasm32-unknown-unknown/$PROFILE/pdf_webeditor.wasm"
+
+# Optional (Release): wasm-opt aus binaryen verkleinert das WebAssembly um rund ein Drittel.
+if [[ "$PROFILE" == release ]] && command -v wasm-opt >/dev/null; then
+  echo "wasm-opt -Oz …"
+  wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext \
+    --enable-mutable-globals --enable-reference-types --enable-multivalue \
+    dist/pkg/pdf_webeditor_bg.wasm -o dist/pkg/pdf_webeditor_bg.wasm
+fi
 cp web/index.html dist/
 cp vendor/pdfium/pdfium.js vendor/pdfium/pdfium.wasm dist/pdfium/
 cp -r vendor/pdfium/licenses dist/pdfium/
+mkdir -p dist/fonts
+cp vendor/fonts/*.ttf vendor/fonts/*.txt dist/fonts/
 
 echo "Fertig: dist/ ($(du -sh dist | cut -f1))"
 du -h dist/pkg/*.wasm dist/pdfium/pdfium.wasm

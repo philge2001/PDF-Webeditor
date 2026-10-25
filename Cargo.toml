@@ -15,7 +15,7 @@ crate-type = ["cdylib", "rlib"]
 # Die komplette Oberfläche aus dem Desktop-Projekt (eine Codebasis für beide Versionen),
 # ohne Texterkennung (Tesseract lässt sich nicht für den Browser bauen, siehe W6).
 # Fester Commit, damit Builds reproduzierbar bleiben; bei Bedarf bewusst hochziehen.
-pdftool-app = { git = "https://github.com/philge2001/PDF-Tool", rev = "64b9937316a35251c38ee69463b8338eee8823c7", default-features = false }
+pdftool-app = { git = "https://github.com/philge2001/PDF-Tool", rev = "55c75b49796083a5f426db69c0a803d729e3cada", default-features = false }
 # egui im Browser (WebGL über glow), dieselbe Version wie die Desktop-App.
 eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "persistence"] }
 
@@ -48,5 +48,3 @@ opt-level = 1
 opt-level = "s"
 lto = true
 codegen-units = 1
-
-

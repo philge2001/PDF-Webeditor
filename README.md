@@ -18,7 +18,9 @@ Export, Komprimieren, PDF/A, Signieren (ohne Zeitstempel), Barrierefreiheit. Noc
   Einstellungen (Design, Autor, vertraute Zertifikate …) bleiben dagegen im Browser gespeichert.
 - **Hintergrund-Arbeit** (Komprimieren, PDF/A, Export, Signieren) läuft im Browser ohne eigenen Thread – die
   Oberfläche hält währenddessen kurz an.
-- **Nicht verfügbar:** Texterkennung (OCR), Zeitstempeldienste beim Signieren, Systemschriften.
+- **Schriften:** keine Systemschriften. Zur Auswahl stehen Noto Sans und Liberation Sans/Serif/Mono (metrisch gleich zu
+  Arial, Times New Roman, Courier New); Liberation wird kurz nach dem Start im Hintergrund nachgeladen.
+- **Nicht verfügbar:** Texterkennung (OCR), Zeitstempeldienste beim Signieren.
 - Schließen oder Neuladen des Tabs mit ungespeicherten Änderungen: Der Browser fragt nach („Seite verlassen?“).
 
 ## Bauen und starten
@@ -36,6 +38,9 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Dev       # schnelle
 ```
 (`-Serve` braucht Python; ohne Python: `npx --yes http-server dist -p 8080`.)
 
+Optional, für eine rund ein Drittel kleinere Datei: [binaryen](https://github.com/WebAssembly/binaryen/releases)
+entpacken und `wasm-opt` in den `PATH` legen – die Build-Skripte nutzen es dann automatisch (nur Release).
+
 **Linux/macOS/Git Bash** – bauen (lädt PDFium beim ersten Mal nach `vendor/`):
 ```bash
 bash scripts/build.sh            # Release, ~2 min
@@ -48,6 +53,23 @@ python3 -m http.server 8080 -d dist
 # Browser: http://localhost:8080
 ```
 
+## W4 – Schriften und Ladegröße
+
+- Die Liberation-Schriften (bisher nur intern für PDF/A) sind jetzt Schriftarten der App – im Browser die
+  Alternative zu Systemschriften. Sie liegen nicht mehr im WebAssembly, sondern als `dist/fonts/*.ttf` daneben
+  und werden nach dem Start nachgeladen (`scripts/fetch-fonts.sh` holt sie aus PDF-Tool im gepinnten Stand).
+- `wasm-opt -Oz` im Build, wenn installiert.
+
+| | vorher | nachher |
+|---|---|---|
+| App-WASM roh | 22 MB | 11 MB |
+| App-WASM gzip | 6,9 MB | 4,0 MB |
+| + pdfium.wasm gzip | 2,4 MB | 2,4 MB |
+| **Laden bis zum Start (gzip)** | **9,3 MB** | **6,4 MB** |
+| danach im Hintergrund: Schriften | – | 4,7 MB roh (gzip ≈ 2,5 MB) |
+
+Ohne `wasm-opt` liegt das App-WASM bei ≈ 18 MB roh / 4,5 MB gzip.
+
 ## W3 – Desktop-App im Browser
 
 In PDF-Tool (Branch `web-w3-app`): Die App ist zusätzlich eine Bibliothek (`pdftool_app`). Alles, was zwischen
@@ -59,7 +81,7 @@ Getestet in Chromium: Öffnen (Dialog), Notiz platzieren + Text (mit Umlauten) +
 Markieren, Freitext, Seitenminiaturen, Suche, PDF/A, Export (PNG je Seite, Word), Speichern als Download
 (inkrementell, Notiztext in der Datei).
 
-Ladegröße: App-WASM 22 MB (gzip 6,9 MB) + pdfium.wasm 5,2 MB (gzip 2,4 MB). Verkleinern ist Teil von W4.
+Ladegröße damals: App-WASM 22 MB (gzip 6,9 MB) + pdfium.wasm 5,2 MB (gzip 2,4 MB) – siehe W4.
 
 ## W1 – Plattformneutraler Kern
 

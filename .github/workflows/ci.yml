@@ -19,6 +19,10 @@ jobs:
         run: |
           VERSION="$(grep -oP 'wasm-bindgen = "=\K[0-9.]+' Cargo.toml)"
           cargo install wasm-bindgen-cli --version "$VERSION" --locked
+      - name: wasm-opt (binaryen) installieren
+        run: |
+          curl -fsSL https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz | tar xz
+          echo "$PWD/binaryen-version_123/bin" >> "$GITHUB_PATH"
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: bash scripts/build.sh
