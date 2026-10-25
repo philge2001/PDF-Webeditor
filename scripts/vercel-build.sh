@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 TOOLS="$ROOT/.tools"
 mkdir -p "$TOOLS/bin"
-export PATH="$TOOLS/bin:$HOME/.cargo/bin:$PATH"
+export PATH="$TOOLS/bin:${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 
 # C-Compiler (Linker für Build-Skripte und Makros der Rust-Abhängigkeiten).
 if ! command -v cc >/dev/null; then
@@ -16,12 +16,16 @@ if ! command -v cc >/dev/null; then
   dnf install -y gcc >/dev/null
 fi
 
-# Rust (stabil, minimal) mit dem Ziel wasm32.
-if ! command -v cargo >/dev/null; then
-  echo "Installiere Rust …"
-  curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+# Rust: immer die aktuelle stabile Version über rustup. Vercel bringt zwar Rust mit, aber eine ältere
+# Fassung (1.92) – egui 0.37 braucht mindestens 1.95.
+if ! command -v rustup >/dev/null; then
+  echo "Installiere rustup …"
+  curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none --no-modify-path
 fi
-rustup target add wasm32-unknown-unknown
+rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown
+rustup default stable
+hash -r # die Shell soll cargo/rustc neu suchen (jetzt aus ~/.cargo/bin)
+echo "$(rustc --version), $(command -v cargo)"
 
 # wasm-bindgen-cli als fertiges Programm (exakt die Version aus Cargo.toml; cargo install bräuchte ~5 min).
 WB="$(grep -oP 'wasm-bindgen = "=\K[0-9.]+' Cargo.toml)"
