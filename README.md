@@ -56,6 +56,18 @@ Jeder Build hängt eine Kennung (`?v=<PDF-Tool-Stand>-<Uhrzeit>`) an die App-Dat
 einem neuen Build nicht die alte Fassung aus dem Zwischenspeicher nimmt. Welche Fassung läuft, steht in der
 Browser-Konsole (F12): „PDF Webeditor, Build …“.
 
+## Veröffentlichen auf Vercel
+
+Vercel bringt beim Bauen nur Node mit. `scripts/vercel-build.sh` installiert deshalb Rust (rustup, minimal + wasm32),
+wasm-bindgen-cli und wasm-opt als fertige Programme nach `.tools/` und ruft dann `scripts/build.sh` auf.
+`vercel.json` setzt Build-Befehl und Ausgabeordner (`dist`), es gibt keinen Installationsschritt. Ein Build dauert
+etwa 4–8 Minuten.
+
+1. Auf vercel.com „Add New → Project“ wählen und dieses Repository importieren.
+2. Framework Preset „Other“ lassen. Die Einstellungen kommen aus `vercel.json`, nichts überschreiben.
+3. Unter Settings → Git die **Production Branch** auf den Branch mit dem gewünschten Stand setzen. Standard ist der
+   Standard-Branch des Repositorys.
+
 ## W4 – Schriften und Ladegröße
 
 - Die Liberation-Schriften (bisher nur intern für PDF/A) sind jetzt Schriftarten der App – im Browser die
