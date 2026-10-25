@@ -3,11 +3,25 @@
 [PDF Tool](https://github.com/philge2001/PDF-Tool) als Webapp. Alles läuft **im Browser**
 (Rust → WebAssembly): PDFs verlassen den Rechner nicht, es gibt keinen Server.
 
-- Oberfläche: egui/eframe (wie die Desktop-App), gezeichnet in ein `<canvas>` (WebGL)
-- Fachlogik: `pdftool-core` direkt aus dem PDF-Tool-Repository (Git-Abhängigkeit, fester Commit)
+- Oberfläche: **dieselbe App wie auf dem Desktop** (`pdftool-app` aus dem PDF-Tool-Repository, egui im `<canvas>`)
 - Rendern: PDFium als WebAssembly ([pdfium-lib](https://github.com/paulocoutinhox/pdfium-lib)) über pdfium-render
 
-**Stand:** W1 – Kern plattformneutral, Speichern im Browser funktioniert (siehe unten).
+**Stand:** W3 – die Desktop-App läuft im Browser: Kommentieren (Notizen platzieren, Text eingeben, verschieben),
+Markieren, Freitext, Zeichnen, Suche, Seiten organisieren, Formulare, Schwärzen, Text/Bilder bearbeiten,
+Export, Komprimieren, PDF/A, Signieren (ohne Zeitstempel), Barrierefreiheit. Noch nicht: Texterkennung (W6).
+
+### Unterschiede zur Desktop-App
+- **Öffnen:** „Datei öffnen“ oder PDF ins Fenster ziehen. Die Datei bleibt im Browser, nichts wird hochgeladen.
+- **Speichern:** Strg+S bzw. „Speichern“ lädt die Datei herunter (Downloads-Ordner). Es gibt keinen Speichern-Dialog;
+  mehrere Dateien (Teilen, Bilder-Export) kommen als einzelne Downloads.
+- **Zuletzt verwendet:** nur Dateien der aktuellen Sitzung (nach dem Neuladen der Seite ist die Liste leer).
+  Einstellungen (Design, Autor, vertraute Zertifikate …) bleiben dagegen im Browser gespeichert.
+- **Hintergrund-Arbeit** (Komprimieren, PDF/A, Export, Signieren) läuft im Browser ohne eigenen Thread – die
+  Oberfläche hält währenddessen kurz an.
+- **Schriften:** keine Systemschriften. Zur Auswahl stehen Noto Sans und Liberation Sans/Serif/Mono (metrisch gleich zu
+  Arial, Times New Roman, Courier New); Liberation wird kurz nach dem Start im Hintergrund nachgeladen.
+- **Nicht verfügbar:** Texterkennung (OCR), Zeitstempeldienste beim Signieren.
+- Schließen oder Neuladen des Tabs mit ungespeicherten Änderungen: Der Browser fragt nach („Seite verlassen?“).
 
 ## Bauen und starten
 
@@ -17,7 +31,17 @@ rustup target add wasm32-unknown-unknown
 cargo install wasm-bindgen-cli --version 0.2.129 --locked   # muss zu Cargo.toml passen
 ```
 
-Bauen (lädt PDFium beim ersten Mal nach `vendor/`):
+**Windows (PowerShell):** Befehle einzeln eingeben – Windows PowerShell 5.1 kennt `&&` nicht. Statt `build.sh`:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Serve     # bauen und auf http://localhost:8080 starten
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Dev       # schneller Debug-Build, ohne Start
+```
+(`-Serve` braucht Python; ohne Python: `npx --yes http-server dist -p 8080`.)
+
+Optional, für eine rund ein Drittel kleinere Datei: [binaryen](https://github.com/WebAssembly/binaryen/releases)
+entpacken und `wasm-opt` in den `PATH` legen – die Build-Skripte nutzen es dann automatisch (nur Release).
+
+**Linux/macOS/Git Bash** – bauen (lädt PDFium beim ersten Mal nach `vendor/`):
 ```bash
 bash scripts/build.sh            # Release, ~2 min
 bash scripts/build.sh --debug    # schneller gebaut, deutlich größer
@@ -28,10 +52,39 @@ Starten (jeder statische Webserver geht; `file://` nicht, wegen WebAssembly):
 python3 -m http.server 8080 -d dist
 # Browser: http://localhost:8080
 ```
+Jeder Build hängt eine Kennung (`?v=<PDF-Tool-Stand>-<Uhrzeit>`) an die App-Dateien, damit der Browser nach
+einem neuen Build nicht die alte Fassung aus dem Zwischenspeicher nimmt. Welche Fassung läuft, steht in der
+Browser-Konsole (F12): „PDF Webeditor, Build …“.
 
-Bedienung: „PDF öffnen…“, „Beispiel-PDF“ oder eine PDF ins Fenster ziehen; Seiten mit ◀ ▶,
-Zoom per Schieberegler. „Notiz einfügen“ setzt eine Notiz in die Seitenmitte, „Speichern (Download)“ speichert
-inkrementell und bietet die Datei zum Herunterladen an. Rechts stehen die Messwerte.
+## W4 – Schriften und Ladegröße
+
+- Die Liberation-Schriften (bisher nur intern für PDF/A) sind jetzt Schriftarten der App – im Browser die
+  Alternative zu Systemschriften. Sie liegen nicht mehr im WebAssembly, sondern als `dist/fonts/*.ttf` daneben
+  und werden nach dem Start nachgeladen (`scripts/fetch-fonts.sh` holt sie aus PDF-Tool im gepinnten Stand).
+- `wasm-opt -Oz` im Build, wenn installiert.
+
+| | vorher | nachher |
+|---|---|---|
+| App-WASM roh | 22 MB | 11 MB |
+| App-WASM gzip | 6,9 MB | 4,0 MB |
+| + pdfium.wasm gzip | 2,4 MB | 2,4 MB |
+| **Laden bis zum Start (gzip)** | **9,3 MB** | **6,4 MB** |
+| danach im Hintergrund: Schriften | – | 4,7 MB roh (gzip ≈ 2,5 MB) |
+
+Ohne `wasm-opt` liegt das App-WASM bei ≈ 18 MB roh / 4,5 MB gzip.
+
+## W3 – Desktop-App im Browser
+
+In PDF-Tool (Branch `web-w3-app`): Die App ist zusätzlich eine Bibliothek (`pdftool_app`). Alles, was zwischen
+Desktop und Browser verschieden ist, steckt im Modul `app::platform` (Dateidialoge, Lesen/Schreiben,
+Hintergrund-Arbeit). Der Render-Worker läuft im Browser ohne Thread in Zeitscheiben pro Frame.
+Dieses Repository startet nur noch `PdfToolApp` im Canvas (`src/lib.rs`).
+
+Getestet in Chromium: Öffnen (Dialog), Notiz platzieren + Text (mit Umlauten) + verschieben, Kommentar-Panel,
+Markieren, Freitext, Seitenminiaturen, Suche, PDF/A, Export (PNG je Seite, Word), Speichern als Download
+(inkrementell, Notiztext in der Datei).
+
+Ladegröße damals: App-WASM 22 MB (gzip 6,9 MB) + pdfium.wasm 5,2 MB (gzip 2,4 MB) – siehe W4.
 
 ## W1 – Plattformneutraler Kern
 
@@ -43,6 +96,19 @@ liefern im Browser nur Fehler, stürzen aber nicht ab – genutzt werden dort di
 
 Getestet in Chromium: 500-Seiten-PDF, Notiz auf Seite 4, speichern, erneut Notiz, erneut speichern → zwei
 inkrementelle Revisionen, beide Notizen mit Datum und `/NM`, Datei gültig (`pdfinfo`, `pdftoppm`).
+
+## Durchgetestet im Browser
+
+Mit `tests/e2e/drive.js` in Chromium durchgeklickt und die Ergebnisdateien mit poppler (`pdfinfo`, `pdftotext`,
+`pdfimages`, `pdfsig`) geprüft: Kommentieren (Notiz, Markieren, Freitext), Formulare ausfüllen und gestalten,
+Seiten drehen/einfügen/löschen/extrahieren/teilen, Zusammenführen, Schwärzen (Text wirklich entfernt), Passwortschutz
+(AES-256, Öffnen mit Passwort), Komprimieren, PDF/A, Export (PNG, Word), Text und Bilder bearbeiten, Bild per Strg+V,
+Testzertifikat erstellen und signieren (`pdfsig`: gültig), Vergleich, Barrierefreiheit prüfen und taggen,
+Lesezeichen, Suche, Einstellungen nach Neuladen.
+
+Dabei behoben (in PDF-Tool): Absturz beim Testzertifikat (versteckter `SystemTime::now()` in x509-cert),
+unsichtbare Eingabefelder im hellen Design, Strg+V mit Bild, Rückfrage beim Schließen, Meldungen mit leerem
+Ordnernamen; hier: Debug-Build (`--debug`/`-Dev`) war für wasm-bindgen zu groß.
 
 ## W0 – Ergebnis des Machbarkeitstests
 

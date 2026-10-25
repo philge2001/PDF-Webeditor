@@ -12,33 +12,36 @@ description = "PDF Tool als Webapp (läuft vollständig im Browser)"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# Fachlogik direkt aus dem Desktop-Projekt – eine Codebasis für beide Versionen.
+# Die komplette Oberfläche aus dem Desktop-Projekt (eine Codebasis für beide Versionen),
+# ohne Texterkennung (Tesseract lässt sich nicht für den Browser bauen, siehe W6).
 # Fester Commit, damit Builds reproduzierbar bleiben; bei Bedarf bewusst hochziehen.
-pdftool-core = { git = "https://github.com/philge2001/PDF-Tool", rev = "e374ebb87cdd58b8abe3fe0f83a53828f25d9908" }
-# Gleiche Version wie im Desktop-Projekt; im Browser bindet sie sich an pdfium.wasm (siehe web/index.html).
-# Ohne `thread_safe`: im Browser gibt es (vorerst) nur einen Thread.
-pdfium-render = { version = "0.9.4", default-features = false, features = ["pdfium_latest"] }
+pdftool-app = { git = "https://github.com/philge2001/PDF-Tool", rev = "bd0963fb67ca071373aaadab2b7e7ab04df3aa25", default-features = false }
 # egui im Browser (WebGL über glow), dieselbe Version wie die Desktop-App.
-eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow"] }
-# Datei-Dialog: im Browser ein <input type="file">, liefert die Bytes asynchron.
-rfd = "0.17"
-log = "0.4"
+eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "persistence"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # Muss exakt zur installierten wasm-bindgen-cli passen (scripts/build.sh prüft das).
 wasm-bindgen = "=0.2.129"
 wasm-bindgen-futures = "0.4"
-js-sys = "0.3"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlCanvasElement", "HtmlAnchorElement", "Blob", "BlobPropertyBag", "Url", "Performance"] }
-# Panics als lesbare Meldung in der Browser-Konsole; Logausgabe dorthin.
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlCanvasElement"] }
+# Panics als lesbare Meldung in der Browser-Konsole.
 console_error_panic_hook = "0.1"
-console_log = "1"
+# Log-Meldungen der App (tracing) in die Browser-Konsole – MIT/Apache.
+tracing-wasm = "0.2"
 
 [lints.rust]
 unsafe_code = "forbid"
 
 [lints.clippy]
 all = { level = "warn", priority = -1 }
+
+[profile.dev]
+# Volle Debug-Infos machen das WebAssembly ~380 MB groß – das verarbeitet wasm-bindgen nicht.
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+# Abhängigkeiten auch im Debug-Build optimieren (kleiner und deutlich schneller im Browser).
+opt-level = 1
 
 [profile.release]
 # Kleineres WebAssembly: weniger Ladezeit im Browser.

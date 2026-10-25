@@ -1,15 +1,8 @@
 //! PDF Webeditor – PDF Tool im Browser.
 //!
-//! Stand W0 (Machbarkeitstest): PDF öffnen, mit PDFium (WebAssembly) rendern, mit
-//! `pdftool-core` lesen, eine Notiz einfügen und als Download speichern.
+//! Die Oberfläche ist dieselbe wie in der Desktop-App: [`pdftool_app::PdfToolApp`] aus dem
+//! PDF-Tool-Repository. Hier passiert nur der Start im `<canvas>` der Webseite.
 //! Der Code läuft nur im Browser (`wasm32`); auf dem Host bleibt die Bibliothek leer.
-
-#[cfg(target_arch = "wasm32")]
-mod app;
-#[cfg(target_arch = "wasm32")]
-mod browser;
-#[cfg(target_arch = "wasm32")]
-mod pdf;
 
 #[cfg(target_arch = "wasm32")]
 pub use web_entry::start;
@@ -22,12 +15,12 @@ mod web_entry {
     /// Startet die App im `<canvas>` mit der angegebenen ID.
     ///
     /// Wird aus `web/index.html` aufgerufen, NACHDEM `initialize_pdfium_render` die Brücke
-    /// zu pdfium.wasm hergestellt hat – sonst findet pdfium-render keine Bibliothek.
+    /// zu pdfium.wasm hergestellt hat – sonst findet die App PDFium nicht.
     #[wasm_bindgen]
     pub async fn start(canvas_id: String) -> Result<(), JsValue> {
         console_error_panic_hook::set_once();
-        // Schlägt fehl, wenn pdfium-render schon einen Logger gesetzt hat – das ist in Ordnung.
-        let _ = console_log::init_with_level(log::Level::Info);
+        // Log-Meldungen der App (tracing) in die Browser-Konsole (F12).
+        tracing_wasm::set_as_global_default();
 
         let canvas = web_sys::window()
             .and_then(|w| w.document())
@@ -40,7 +33,8 @@ mod web_entry {
             .start(
                 canvas,
                 eframe::WebOptions::default(),
-                Box::new(|cc| Ok(Box::new(crate::app::WebApp::new(cc)))),
+                // Keine Startdateien und kein Vergleich – im Browser öffnet man über die Oberfläche.
+                Box::new(|cc| Ok(Box::new(pdftool_app::PdfToolApp::new(cc, Vec::new(), None)))),
             )
             .await
     }
