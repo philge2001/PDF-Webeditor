@@ -8,7 +8,7 @@
 
 **Stand:** W3 – die Desktop-App läuft im Browser: Kommentieren (Notizen platzieren, Text eingeben, verschieben),
 Markieren, Freitext, Zeichnen, Suche, Seiten organisieren, Formulare, Schwärzen, Text/Bilder bearbeiten,
-Export, Komprimieren, PDF/A, Signieren (ohne Zeitstempel), Barrierefreiheit. Noch nicht: Texterkennung (W6).
+Export, Komprimieren, PDF/A, Signieren (ohne Zeitstempel), Barrierefreiheit, Texterkennung (OCR).
 
 ### Unterschiede zur Desktop-App
 - **Öffnen:** „Datei öffnen“ oder PDF ins Fenster ziehen. Die Datei bleibt im Browser, nichts wird hochgeladen.
@@ -20,7 +20,10 @@ Export, Komprimieren, PDF/A, Signieren (ohne Zeitstempel), Barrierefreiheit. Noc
   Oberfläche hält währenddessen kurz an.
 - **Schriften:** keine Systemschriften. Zur Auswahl stehen Noto Sans und Liberation Sans/Serif/Mono (metrisch gleich zu
   Arial, Times New Roman, Courier New); Liberation wird kurz nach dem Start im Hintergrund nachgeladen.
-- **Nicht verfügbar:** Texterkennung (OCR), Zeitstempeldienste beim Signieren.
+- **Texterkennung (OCR):** über tesseract.js, dieselbe Erkennung und dieselben Sprachdaten (Deutsch, Englisch) wie
+  auf dem Desktop. Sie wird erst beim ersten Gebrauch geladen (≈ 4 MB Erkennung + 0,9 MB Deutsch + 2 MB Englisch, danach
+  im Browser zwischengespeichert). Abbrechen greift erst nach der laufenden Seite.
+- **Nicht verfügbar:** Zeitstempeldienste beim Signieren.
 - Schließen oder Neuladen des Tabs mit ungespeicherten Änderungen: Der Browser fragt nach („Seite verlassen?“).
 
 ## Bauen und starten
@@ -55,6 +58,22 @@ python3 -m http.server 8080 -d dist
 Jeder Build hängt eine Kennung (`?v=<PDF-Tool-Stand>-<Uhrzeit>`) an die App-Dateien, damit der Browser nach
 einem neuen Build nicht die alte Fassung aus dem Zwischenspeicher nimmt. Welche Fassung läuft, steht in der
 Browser-Konsole (F12): „PDF Webeditor, Build …“.
+
+## W6 – Texterkennung (OCR)
+
+Die Desktop-App bindet Tesseract als C++-Bibliothek ein, das lässt sich nicht für den Browser bauen. Im Browser
+übernimmt [tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0) – Tesseract als WebAssembly in einem
+eigenen Web Worker:
+
+- `scripts/fetch-tesseract.sh` (bzw. `build.ps1`) lädt tesseract.js und tesseract.js-core 7.0.0 aus der npm-Registry
+  (Prüfsumme wird geprüft) und die Sprachdaten aus PDF-Tool im gepinnten Stand nach `dist/ocr/`.
+- `web/index.html` stellt `window.pdftoolOcr(rgba, breite, höhe, sprachen)` bereit: lädt tesseract.js beim ersten Aufruf,
+  erkennt mit automatischer Seitenaufteilung und 300 dpi und gibt Tesseracts TSV-Tabelle zurück.
+- PDF-Tool (`app::ocr_ui`) rendert die Seite, ruft die Funktion auf und legt die Wörter wie auf dem Desktop als
+  unsichtbare Textebene ab (Suchen, Markieren, Kopieren).
+
+Getestet in Chromium: gescannte Seite → 22 Wörter erkannt (Umlaute, ß), gespeichert, mit `pdftotext -bbox` geprüft
+(Text an der richtigen Stelle). Es werden nur Dateien vom eigenen Server geladen.
 
 ## Veröffentlichen auf Vercel
 
