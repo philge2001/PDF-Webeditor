@@ -25,6 +25,7 @@ fi
 
 bash scripts/fetch-pdfium.sh
 bash scripts/fetch-fonts.sh
+bash scripts/fetch-tesseract.sh
 cargo build "${CARGO_FLAGS[@]}" --target wasm32-unknown-unknown
 
 rm -rf dist
@@ -46,6 +47,8 @@ cp vendor/pdfium/pdfium.js vendor/pdfium/pdfium.wasm dist/pdfium/
 cp -r vendor/pdfium/licenses dist/pdfium/
 mkdir -p dist/fonts
 cp vendor/fonts/*.ttf vendor/fonts/*.txt dist/fonts/
+mkdir -p dist/ocr
+cp -r vendor/ocr/tesseract.min.js vendor/ocr/worker.min.js vendor/ocr/core vendor/ocr/lang vendor/ocr/licenses dist/ocr/
 
 echo "Build $BUILD"
 echo "Fertig: dist/ ($(du -sh dist | cut -f1))"

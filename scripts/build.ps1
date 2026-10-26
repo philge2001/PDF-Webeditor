@@ -101,6 +101,63 @@ if ((Test-Path $FontRevFile) -and ((Get-Content $FontRevFile -Raw).Trim() -eq $R
     Write-Host "Liberation-Schriften (PDF-Tool $Rev) nach $Fonts geladen"
 }
 
+# --- Texterkennung: tesseract.js + Sprachdaten (erst bei Bedarf geladen), wie scripts/fetch-tesseract.sh ---
+$TessVersion = "7.0.0"
+$TessSha = @{
+    "tesseract.js"      = "exPBkd+z+wM1BuMkx/Bjv43OeLBxhL5kKWsz/9JY+DXcXdiBjiAch0V49QR3oAJqCaL5qURE0vx9Eo+G5YE7mA=="
+    "tesseract.js-core" = "WnNH518NzmbSq9zgTPeoF8c+xmilS8rFIl1YKbk/ptuuc7p6cLNELNuPAzcmsYw450ca6bLa8j3t0VAtq435Vw=="
+}
+$Ocr = Join-Path $Root "vendor\ocr"
+$OcrStampFile = Join-Path $Ocr "STAMP"
+$OcrStamp = "$TessVersion $Rev"
+if ((Test-Path $OcrStampFile) -and ((Get-Content $OcrStampFile -Raw).Trim() -eq $OcrStamp)) {
+    Write-Host "Texterkennung (tesseract.js $TessVersion) liegt schon in $Ocr"
+} else {
+    $Tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("pdfwebeditor-ocr-" + [guid]::NewGuid())
+    New-Item -ItemType Directory -Force $Tmp | Out-Null
+    try {
+        foreach ($pkg in @("tesseract.js", "tesseract.js-core")) {
+            $Tgz = Join-Path $Tmp "$pkg.tgz"
+            Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", $Tgz,
+                "https://registry.npmjs.org/$pkg/-/$pkg-$TessVersion.tgz")
+            # Prüfsumme wie in der npm-Registry (SHA-512, Base64).
+            $Hex = (Get-FileHash -Algorithm SHA512 $Tgz).Hash
+            $Bytes = [byte[]]::new($Hex.Length / 2)
+            for ($i = 0; $i -lt $Bytes.Length; $i++) { $Bytes[$i] = [Convert]::ToByte($Hex.Substring(2 * $i, 2), 16) }
+            if ([Convert]::ToBase64String($Bytes) -ne $TessSha[$pkg]) { throw "Prüfsumme von $pkg $TessVersion stimmt nicht" }
+            $Out = Join-Path $Tmp $pkg
+            New-Item -ItemType Directory -Force $Out | Out-Null
+            Invoke-Tool "tar.exe" @("-xzf", $Tgz, "-C", $Out)
+        }
+        if (Test-Path $Ocr) { Remove-Item -Recurse -Force $Ocr }
+        foreach ($d in @("core", "lang", "licenses")) { New-Item -ItemType Directory -Force (Join-Path $Ocr $d) | Out-Null }
+        $Js = Join-Path $Tmp "tesseract.js\package"
+        $Core = Join-Path $Tmp "tesseract.js-core\package"
+        Copy-Item (Join-Path $Js "dist\tesseract.min.js") $Ocr
+        Copy-Item (Join-Path $Js "dist\worker.min.js") $Ocr
+        foreach ($v in @("lstm", "simd-lstm", "relaxedsimd-lstm")) {
+            Copy-Item (Join-Path $Core "tesseract-core-$v.wasm.js") (Join-Path $Ocr "core")
+        }
+        Copy-Item (Join-Path $Js "LICENSE.md") (Join-Path $Ocr "licenses\tesseract.js.md")
+        Copy-Item (Join-Path $Core "LICENSE") (Join-Path $Ocr "licenses\tesseract.js-core.txt")
+        # Sprachdaten aus PDF-Tool (dieselben wie in der Desktop-App), gzip-komprimiert für tesseract.js.
+        $Base = "https://raw.githubusercontent.com/philge2001/PDF-Tool/$Rev/assets/tessdata"
+        foreach ($l in @("deu", "eng")) {
+            $Raw = Join-Path $Tmp "$l.traineddata"
+            Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", $Raw, "$Base/$l.traineddata")
+            $In = [System.IO.File]::OpenRead($Raw)
+            $Dst = [System.IO.File]::Create((Join-Path $Ocr "lang\$l.traineddata.gz"))
+            $Gz = New-Object System.IO.Compression.GZipStream($Dst, [System.IO.Compression.CompressionLevel]::Optimal)
+            try { $In.CopyTo($Gz) } finally { $Gz.Dispose(); $Dst.Dispose(); $In.Dispose() }
+        }
+        Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", (Join-Path $Ocr "licenses\tessdata.txt"), "$Base/LICENSE")
+        Set-Content -Path $OcrStampFile -Value $OcrStamp -Encoding ASCII
+        Write-Host "Texterkennung (tesseract.js $TessVersion) nach $Ocr geladen"
+    } finally {
+        Remove-Item -Recurse -Force $Tmp -ErrorAction SilentlyContinue
+    }
+}
+
 # --- Rust → WebAssembly ---
 $BuildProfile = if ($Dev) { "debug" } else { "release" }
 $CargoArgs = @("build", "--target", "wasm32-unknown-unknown")
@@ -131,6 +188,10 @@ Copy-Item -Recurse (Join-Path $Vendor "licenses") (Join-Path $Dist "pdfium")
 New-Item -ItemType Directory -Force (Join-Path $Dist "fonts") | Out-Null
 Copy-Item (Join-Path $Fonts "*.ttf") (Join-Path $Dist "fonts")
 Copy-Item (Join-Path $Fonts "*.txt") (Join-Path $Dist "fonts")
+New-Item -ItemType Directory -Force (Join-Path $Dist "ocr") | Out-Null
+foreach ($f in @("tesseract.min.js", "worker.min.js", "core", "lang", "licenses")) {
+    Copy-Item -Recurse (Join-Path $Ocr $f) (Join-Path $Dist "ocr")
+}
 
 $SizeMb = [math]::Round(((Get-ChildItem -Recurse $Dist | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
 Write-Host "Build $Build"

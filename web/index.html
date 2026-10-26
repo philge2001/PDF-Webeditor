@@ -15,6 +15,60 @@
   <canvas id="app"></canvas>
   <div id="loading">PDF Webeditor wird geladen…</div>
 
+  <script>
+    // Texterkennung (OCR) für die App: PDF Tool ruft window.pdftoolOcr auf (PDF-Tool app::ocr_ui::web)
+    // und bekommt Tesseracts TSV-Tabelle zurück. tesseract.js, die Erkennung (WebAssembly) und die
+    // Sprachdaten liegen in ocr/ (scripts/fetch-tesseract.sh) und werden erst beim ersten Aufruf
+    // geladen. tesseract.js rechnet in einem eigenen Web Worker; die Seite bleibt bedienbar.
+    let ocrWorker = null;
+    let ocrLangs = null;
+    let tesseractLoaded = null;
+
+    function loadTesseract() {
+      tesseractLoaded ??= new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "ocr/tesseract.min.js";
+        script.onload = resolve;
+        script.onerror = () => {
+          tesseractLoaded = null; // nächster Versuch lädt neu
+          reject(new Error("ocr/tesseract.min.js konnte nicht geladen werden"));
+        };
+        document.head.append(script);
+      });
+      return tesseractLoaded;
+    }
+
+    window.pdftoolOcr = async (rgba, width, height, langs) => {
+      // Pixel sofort kopieren: rgba zeigt in den WebAssembly-Speicher der App, der sich ändern kann.
+      const image = new ImageData(new Uint8ClampedArray(rgba), width, height);
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").putImageData(image, 0, 0);
+
+      await loadTesseract();
+      if (!ocrWorker || ocrLangs !== langs) {
+        const old = ocrWorker;
+        ocrWorker = null;
+        await old?.terminate();
+        const base = new URL("ocr/", location.href).href;
+        const worker = await Tesseract.createWorker(langs.split("+"), Tesseract.OEM.LSTM_ONLY, {
+          workerPath: base + "worker.min.js",
+          corePath: base + "core",
+          langPath: base + "lang",
+        });
+        // Wie in der Desktop-App: automatische Seitenaufteilung (Spalten, Blöcke), 300 dpi.
+        await worker.setParameters({
+          tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+          user_defined_dpi: "300",
+        });
+        ocrWorker = worker;
+        ocrLangs = langs;
+      }
+      const { data } = await ocrWorker.recognize(canvas, {}, { tsv: true });
+      return data.tsv;
+    };
+  </script>
   <!-- Definiert PDFiumModule() (Emscripten, modularisiert); lädt pdfium.wasm aus demselben Ordner. -->
   <script src="pdfium/pdfium.js"></script>
   <script type="module">

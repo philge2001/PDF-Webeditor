@@ -29,6 +29,8 @@ Wie in PDF-Tool: keine AGPL, jede neue Crate mit einem Satz begründen.
 - pdftool-app (Git), eframe 0.37 (glow, persistence), wasm-bindgen =0.2.129, wasm-bindgen-futures, web-sys,
   console_error_panic_hook, tracing-wasm (Logs in die Browser-Konsole)
 - PDFium-WASM: paulocoutinhox/pdfium-lib 7902 (MIT-Build-Skripte, PDFium BSD), per `scripts/fetch-pdfium.sh`
+- tesseract.js + tesseract.js-core 7.0.0 (Apache-2.0, npm-Registry mit Prüfsumme) und Sprachdaten deu/eng aus PDF-Tool
+  (Texterkennung im Browser) per `scripts/fetch-tesseract.sh` → `dist/ocr/`
 - Liberation-Schriften (OFL) per `scripts/fetch-fonts.sh` aus PDF-Tool im gepinnten `rev` → `dist/fonts/`
   (die App lädt sie im Browser nach, siehe PDF-Tool `app::platform`). Optional `wasm-opt` (binaryen) im `PATH`.
 
@@ -39,7 +41,7 @@ Wie in PDF-Tool: keine AGPL, jede neue Crate mit einem Satz begründen.
 - [x] W3 Desktop-App im Browser (PDF-Tool `web-w3-app`: `pdftool_app`-Bibliothek, `app::platform`, Render-Worker ohne Thread)
 - [x] W4 Schriften und Ladegröße (Liberation als Schriftarten, im Browser aus `dist/fonts/` nachgeladen; `wasm-opt`)
 - [ ] W5 Signaturen (.p12 im Browser, TSA-Proxy optional)
-- [ ] W6 OCR (tesseract.js)
+- [x] W6 OCR (tesseract.js 7.0.0 per `scripts/fetch-tesseract.sh` → `dist/ocr/`, `window.pdftoolOcr` in `web/index.html`, PDF-Tool `app::ocr_ui::web`)
 - [ ] W7 PWA und Veröffentlichung
 - [ ] W8 Tests (wasm-bindgen-test, Playwright)
 

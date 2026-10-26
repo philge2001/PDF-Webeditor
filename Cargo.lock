@@ -3088,8 +3088,8 @@ dependencies = [
 
 [[package]]
 name = "pdftool-app"
-version = "0.1.1"
-source = "git+https://github.com/philge2001/PDF-Tool?rev=bd0963fb67ca071373aaadab2b7e7ab04df3aa25#bd0963fb67ca071373aaadab2b7e7ab04df3aa25"
+version = "0.1.2"
+source = "git+https://github.com/philge2001/PDF-Tool?rev=579336b6cc4f410dd60dbaa8d4bb684eadfbabac#579336b6cc4f410dd60dbaa8d4bb684eadfbabac"
 dependencies = [
  "anyhow",
  "der",
@@ -3111,8 +3111,8 @@ dependencies = [
 
 [[package]]
 name = "pdftool-core"
-version = "0.1.1"
-source = "git+https://github.com/philge2001/PDF-Tool?rev=bd0963fb67ca071373aaadab2b7e7ab04df3aa25#bd0963fb67ca071373aaadab2b7e7ab04df3aa25"
+version = "0.1.2"
+source = "git+https://github.com/philge2001/PDF-Tool?rev=579336b6cc4f410dd60dbaa8d4bb684eadfbabac#579336b6cc4f410dd60dbaa8d4bb684eadfbabac"
 dependencies = [
  "getrandom 0.4.3",
  "jpeg-encoder",
@@ -3130,8 +3130,8 @@ dependencies = [
 
 [[package]]
 name = "pdftool-render"
-version = "0.1.1"
-source = "git+https://github.com/philge2001/PDF-Tool?rev=bd0963fb67ca071373aaadab2b7e7ab04df3aa25#bd0963fb67ca071373aaadab2b7e7ab04df3aa25"
+version = "0.1.2"
+source = "git+https://github.com/philge2001/PDF-Tool?rev=579336b6cc4f410dd60dbaa8d4bb684eadfbabac#579336b6cc4f410dd60dbaa8d4bb684eadfbabac"
 dependencies = [
  "pdfium-render",
  "pdftool-core",
@@ -3142,8 +3142,8 @@ dependencies = [
 
 [[package]]
 name = "pdftool-sign"
-version = "0.1.1"
-source = "git+https://github.com/philge2001/PDF-Tool?rev=bd0963fb67ca071373aaadab2b7e7ab04df3aa25#bd0963fb67ca071373aaadab2b7e7ab04df3aa25"
+version = "0.1.2"
+source = "git+https://github.com/philge2001/PDF-Tool?rev=579336b6cc4f410dd60dbaa8d4bb684eadfbabac#579336b6cc4f410dd60dbaa8d4bb684eadfbabac"
 dependencies = [
  "cms",
  "der",
