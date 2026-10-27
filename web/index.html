@@ -31,10 +31,11 @@
       --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
       color-scheme: light;
     }
-    /* Dunkel: vor dem Start nach Systemeinstellung, danach wie in der App gewählt (data-theme setzt
-       src/lib.rs, denn PDF Tool lässt hell/dunkel auch unabhängig vom System umschalten). */
+    /* Darstellung: Hell, Dämmerung oder Dunkel als data-theme an <html>. Beim Laden setzt es das
+       Skript unten aus dem Cookie pz_theme (geteilt mit Portal und Hausbuch), danach src/theme.rs so,
+       wie die App gerade aussieht. Ohne data-theme gilt die Systemeinstellung. */
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
+      :root:not([data-theme]) {
         --bg: #1c1c1e;
         --glow-1: rgba(40, 90, 200, 0.35);
         --glow-2: rgba(160, 50, 120, 0.25);
@@ -63,6 +64,23 @@
       --accent: #0a84ff;
       --accent-hover: #409cff;
       --danger: #ff453a;
+      color-scheme: dark;
+    }
+    /* Dämmerung: zwischen hell und dunkel, Indigo mit kräftigeren Farbflächen (wie im Portal). */
+    :root[data-theme="dusk"] {
+      --bg: #3e4479;
+      --glow-1: rgba(110, 140, 255, 0.7);
+      --glow-2: rgba(255, 105, 175, 0.55);
+      --glow-3: rgba(60, 215, 195, 0.5);
+      --surface: rgba(255, 255, 255, 0.11);
+      --surface-2: rgba(255, 255, 255, 0.14);
+      --border: rgba(255, 255, 255, 0.16);
+      --text: #f5f6fb;
+      --text-2: #c5c9df;
+      --accent: #5e7dff;
+      --accent-hover: #7590ff;
+      --danger: #ff7b7b;
+      --shadow-lg: 0 24px 64px rgba(10, 12, 40, 0.45);
       color-scheme: dark;
     }
 
@@ -156,6 +174,12 @@
       .spinner { animation: spin 1.6s linear infinite !important; }
     }
   </style>
+  <script>
+    // Darstellung aus dem Cookie pz_theme (Portal, Hausbuch und PDF Editor teilen es), bevor die
+    // Seite gezeichnet wird: so erscheinen Titelleiste und Ladeanzeige gleich in der richtigen Farbe.
+    window.pdftoolTheme = (document.cookie.match(/(?:^|; )pz_theme=(light|dusk|dark)(?:;|$)/) || [])[1];
+    if (window.pdftoolTheme) document.documentElement.dataset.theme = window.pdftoolTheme;
+  </script>
 </head>
 <body>
   <!-- Dokument-Symbol der App (Kopfleiste, Ladeanzeige). -->
@@ -288,7 +312,7 @@
       if (!initialize_pdfium_render(pdfium, rust, false)) {
         throw new Error("initialize_pdfium_render ist fehlgeschlagen (Details in der Konsole)");
       }
-      await start("app", uiFont);
+      await start("app", uiFont, window.pdftoolTheme);
       canvas.classList.add("ready");
       loading.classList.add("done");
       setTimeout(() => loading.remove(), 300);
