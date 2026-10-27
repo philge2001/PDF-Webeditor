@@ -7,7 +7,7 @@
 //! Ein paar Flächen färbt PDF Tool direkt (Hintergrund hinter den Seiten, schwebende Leisten) –
 //! die bleiben, wie sie sind.
 
-use eframe::egui::epaint::text::{FontInsert, FontPriority, InsertFontFamily};
+use eframe::egui::epaint::text::{FontInsert, FontPriority, FontTweak, InsertFontFamily};
 use eframe::egui::{self, Color32, CornerRadius, FontData, FontFamily, Shadow, Stroke, Theme};
 
 /// Farb-Tokens, benannt wie die CSS-Variablen im Portal (`public/css/style.css`).
@@ -95,7 +95,14 @@ pub fn install(ctx: &egui::Context) {
             v.warn_fg_color = t.warn;
             v.selection.bg_fill = t.accent;
             // Auswahlrahmen (z. B. Fokus im Eingabefeld) in Akzentfarbe, wie `.input:focus`.
-            v.selection.stroke = Stroke::new(1.0, if theme == Theme::Dark { Color32::WHITE } else { t.accent });
+            v.selection.stroke = Stroke::new(
+                1.0,
+                if theme == Theme::Dark {
+                    Color32::WHITE
+                } else {
+                    t.accent
+                },
+            );
 
             // Dialoge wie `dialog` im Portal, Menüs wie `.menu`, Schaltflächen etwas runder.
             v.window_stroke = Stroke::new(1.0, t.border);
@@ -141,6 +148,9 @@ pub fn install(ctx: &egui::Context) {
                 // Kein „Aufblähen“ beim Überfahren: Apple-Buttons bleiben ruhig stehen.
                 wv.expansion = 0.0;
             }
+            // egui füllt damit auch die Titelzeile des aktiven Fensters; im Portal haben Dialoge
+            // keine abgesetzte Titelzeile. Geöffnete Menüknöpfe zeigen dadurch eine helle Pille.
+            w.open.weak_bg_fill = t.surface;
 
             let s = &mut style.spacing;
             s.item_spacing = egui::vec2(8.0, 6.0);
@@ -156,7 +166,12 @@ pub fn install(ctx: &egui::Context) {
 pub fn install_ui_font(ctx: &egui::Context, ttf: Vec<u8>) {
     ctx.add_font(FontInsert::new(
         UI_FONT,
-        FontData::from_owned(ttf),
+        // Inter läuft breiter als egui's eingebaute Schrift; PDF Tool setzt Kacheln und Leisten mit
+        // festen Maßen. Etwas kleiner skaliert passt alles wie bisher (Inter bleibt gut lesbar).
+        FontData::from_owned(ttf).tweak(FontTweak {
+            scale: 0.92,
+            ..Default::default()
+        }),
         vec![InsertFontFamily {
             family: FontFamily::Proportional,
             priority: FontPriority::Highest,
