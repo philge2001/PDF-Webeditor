@@ -101,6 +101,34 @@ if ((Test-Path $FontRevFile) -and ((Get-Content $FontRevFile -Raw).Trim() -eq $R
     Write-Host "Liberation-Schriften (PDF-Tool $Rev) nach $Fonts geladen"
 }
 
+# --- Oberflächenschrift Inter (wird im Browser nachgeladen), wie scripts/fetch-ui-font.sh ---
+$InterVersion = "4.1"
+$InterSha = "9883fdd4a49d4fb66bd8177ba6625ef9a64aa45899767dde3d36aa425756b11e"
+$UiFont = Join-Path $Root "vendor\ui-font"
+$UiFontStamp = Join-Path $UiFont "VERSION"
+if ((Test-Path $UiFontStamp) -and ((Get-Content $UiFontStamp -Raw).Trim() -eq $InterVersion)) {
+    Write-Host "Inter $InterVersion liegt schon in $UiFont"
+} else {
+    $Tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("pdfwebeditor-inter-" + [guid]::NewGuid())
+    New-Item -ItemType Directory -Force $Tmp | Out-Null
+    try {
+        $Zip = Join-Path $Tmp "inter.zip"
+        Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", $Zip,
+            "https://github.com/rsms/inter/releases/download/v$InterVersion/Inter-$InterVersion.zip")
+        if ((Get-FileHash -Algorithm SHA256 $Zip).Hash.ToLower() -ne $InterSha) { throw "Prüfsumme von Inter $InterVersion stimmt nicht" }
+        Expand-Archive -Path $Zip -DestinationPath (Join-Path $Tmp "x")
+        if (Test-Path $UiFont) { Remove-Item -Recurse -Force $UiFont }
+        New-Item -ItemType Directory -Force $UiFont | Out-Null
+        # Nur der normale Schnitt: egui kennt keine Schriftstärken (fett = hellere Farbe).
+        Copy-Item (Join-Path $Tmp "x\extras\ttf\Inter-Regular.ttf") $UiFont
+        Copy-Item (Join-Path $Tmp "x\LICENSE.txt") (Join-Path $UiFont "OFL-Inter.txt")
+        Set-Content -Path $UiFontStamp -Value $InterVersion -Encoding ASCII
+        Write-Host "Inter $InterVersion nach $UiFont geladen"
+    } finally {
+        Remove-Item -Recurse -Force $Tmp -ErrorAction SilentlyContinue
+    }
+}
+
 # --- Texterkennung: tesseract.js + Sprachdaten (erst bei Bedarf geladen), wie scripts/fetch-tesseract.sh ---
 $TessVersion = "7.0.0"
 $TessSha = @{
@@ -188,6 +216,9 @@ Copy-Item -Recurse (Join-Path $Vendor "licenses") (Join-Path $Dist "pdfium")
 New-Item -ItemType Directory -Force (Join-Path $Dist "fonts") | Out-Null
 Copy-Item (Join-Path $Fonts "*.ttf") (Join-Path $Dist "fonts")
 Copy-Item (Join-Path $Fonts "*.txt") (Join-Path $Dist "fonts")
+New-Item -ItemType Directory -Force (Join-Path $Dist "fonts\ui") | Out-Null
+Copy-Item (Join-Path $UiFont "Inter-Regular.ttf") (Join-Path $Dist "fonts\ui")
+Copy-Item (Join-Path $UiFont "OFL-Inter.txt") (Join-Path $Dist "fonts\ui")
 New-Item -ItemType Directory -Force (Join-Path $Dist "ocr") | Out-Null
 foreach ($f in @("tesseract.min.js", "worker.min.js", "core", "lang", "licenses")) {
     Copy-Item -Recurse (Join-Path $Ocr $f) (Join-Path $Dist "ocr")

@@ -20,9 +20,13 @@ wasm-bindgen-cli muss exakt zur `wasm-bindgen`-Version in Cargo.toml passen (bui
   danach `rev` hier hochziehen. Lokal testen: `[patch."https://github.com/philge2001/PDF-Tool"]` mit `path` für
   pdftool-app, -core, -render, -sign (nicht committen).
 - `web/index.html` lädt `pdfium/pdfium.js` (`PDFiumModule()`, Emscripten modularisiert) und `pkg/pdf_webeditor.js`
-  (wasm-bindgen), ruft `initialize_pdfium_render(pdfium, rust, false)` und dann `start("app")`.
-- `src/lib.rs` – `start(canvas_id)`: Panic-Hook, tracing → Browser-Konsole (tracing-wasm), `eframe::WebRunner` mit
-  `PdfToolApp::new(cc, Vec::new(), None)`. Mehr Code gibt es hier nicht.
+  (wasm-bindgen), ruft `initialize_pdfium_render(pdfium, rust, false)` und dann `start("app", uiFont)`.
+- `src/lib.rs` – `start(canvas_id, ui_font)`: Panic-Hook, tracing → Browser-Konsole (tracing-wasm), `eframe::WebRunner` mit
+  `PdfToolApp::new(cc, Vec::new(), None)`, danach Inter als UI-Schrift (`theme::install_ui_font`);
+  `theme::Themed` umhüllt die App und setzt `data-theme` an `<html>` (Titelleiste folgt hell/dunkel).
+- Gestaltung: Portal (github.com/philge2001/portal, `public/css/style.css`) und Hausbuch (vermietung,
+  `app/globals.css`) sind die Vorlage. Farben der App stehen in PDF-Tool `app::style::Palette`; die CSS-Variablen
+  in `web/index.html` (Titelleiste, Ladeanzeige) damit gleich halten.
 
 ## Abhängigkeiten
 Wie in PDF-Tool: keine AGPL, jede neue Crate mit einem Satz begründen.
@@ -33,6 +37,8 @@ Wie in PDF-Tool: keine AGPL, jede neue Crate mit einem Satz begründen.
   (Texterkennung im Browser) per `scripts/fetch-tesseract.sh` → `dist/ocr/`
 - Liberation-Schriften (OFL) per `scripts/fetch-fonts.sh` aus PDF-Tool im gepinnten `rev` → `dist/fonts/`
   (die App lädt sie im Browser nach, siehe PDF-Tool `app::platform`). Optional `wasm-opt` (binaryen) im `PATH`.
+- Inter 4.1 (OFL, UI-Schrift wie im Hausbuch) per `scripts/fetch-ui-font.sh` aus dem rsms/inter-Release (SHA-256)
+  → `dist/fonts/ui/`, von `web/index.html` geladen und an `start()` übergeben
 
 ## Meilensteine
 - [x] W0 Machbarkeitstest (Öffnen, Rendern, core lesen, Notiz-Command; Speichern lokal mit web-time erprobt)
