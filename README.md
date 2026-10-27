@@ -59,6 +59,21 @@ Jeder Build hängt eine Kennung (`?v=<PDF-Tool-Stand>-<Uhrzeit>`) an die App-Dat
 einem neuen Build nicht die alte Fassung aus dem Zwischenspeicher nimmt. Welche Fassung läuft, steht in der
 Browser-Konsole (F12): „PDF Webeditor, Build …“.
 
+## Erscheinungsbild wie Portal und Hausbuch
+
+Der Webeditor sieht aus wie das [Portal](https://github.com/philge2001/portal) und das
+[Hausbuch](https://github.com/philge2001/vermietung): Apple-Systemfarben (Fenstergrund `#f2f2f7`, Systemblau
+`#0071e3`), Haarlinien, Glasflächen, runde Ecken, Schrift Inter.
+
+- `web/index.html`: Titelleiste mit App-Symbol und – nur unter philippzent.com – „Zum Portal“; Ladeanzeige als
+  Glaskarte über den Farbflächen des Portals, mit Fehlermeldung und „Neu laden“, falls der Start scheitert.
+- `src/theme.rs`: legt nach `PdfToolApp::new` dieselben Farben, Radien, Schatten und Abstände über das Schema von
+  PDF Tool (hell und dunkel) und installiert Inter als UI-Schrift. Wählt man in der App hell/dunkel, folgt die
+  Titelleiste (`data-theme` an `<html>`).
+- `scripts/fetch-ui-font.sh` lädt Inter 4.1 (OFL) mit Prüfsumme nach `dist/fonts/ui/` (≈ 400 KB, parallel zur App).
+- Nicht erfasst: Flächen, die PDF Tool fest einfärbt (`app::style::canvas`, `floating_fill`, `border` – Hintergrund
+  hinter den Seiten, schwebende Leisten, Kacheln der Startseite). Die ändern sich nur in PDF-Tool selbst.
+
 ## W6 – Texterkennung (OCR)
 
 Die Desktop-App bindet Tesseract als C++-Bibliothek ein, das lässt sich nicht für den Browser bauen. Im Browser

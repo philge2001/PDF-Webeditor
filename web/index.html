@@ -2,19 +2,205 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
   <title>PDF Webeditor</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='.4' y2='1'%3E%3Cstop offset='0' stop-color='%23ff8a80'/%3E%3Cstop offset='1' stop-color='%23d70015'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14.4' fill='url(%23g)'/%3E%3Cpath d='M22 14h14l10 10v24a3 3 0 0 1-3 3H22a3 3 0 0 1-3-3V17a3 3 0 0 1 3-3z' fill='%23fff'/%3E%3Cpath d='M36 14v8a2 2 0 0 0 2 2h8' fill='%23ffc9c4'/%3E%3Cpath d='M25 33h14M25 39h14M25 45h9' stroke='%23d70015' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
   <style>
-    html, body { margin: 0; height: 100%; overflow: hidden; background: #f4f4f5; font-family: system-ui, sans-serif; }
-    #app { display: block; width: 100%; height: 100%; }
-    #loading { position: absolute; inset: 0; display: grid; place-items: center; color: #444; }
-    #loading.error { color: #b00020; white-space: pre-wrap; padding: 16px; }
+    /* Erscheinungsbild wie im Portal (github.com/philge2001/portal, public/css/style.css) und im
+       Hausbuch (github.com/philge2001/vermietung): Apple-Systemfarben, Glasflächen mit Unschärfe,
+       Haarlinien, runde Pill-Buttons. Die App selbst zeichnet egui ins <canvas>; ihre Farben
+       setzt src/theme.rs mit denselben Werten. */
+    :root {
+      --bg: #f2f2f7;
+      --glow-1: rgba(120, 170, 255, 0.35);
+      --glow-2: rgba(255, 160, 200, 0.28);
+      --glow-3: rgba(140, 230, 200, 0.25);
+      --surface: rgba(255, 255, 255, 0.72);
+      --surface-2: rgba(118, 118, 128, 0.12);
+      --border: rgba(60, 60, 67, 0.12);
+      --text: #1d1d1f;
+      --text-2: #6e6e73;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --danger: #d70015;
+      --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.18);
+      --ease-out: cubic-bezier(.22, 1, .36, 1);
+      --ease-spring: cubic-bezier(.34, 1.36, .64, 1);
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+      color-scheme: light;
+    }
+    /* Dunkel: vor dem Start nach Systemeinstellung, danach wie in der App gewählt (data-theme setzt
+       src/lib.rs, denn PDF Tool lässt hell/dunkel auch unabhängig vom System umschalten). */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #1c1c1e;
+        --glow-1: rgba(40, 90, 200, 0.35);
+        --glow-2: rgba(160, 50, 120, 0.25);
+        --glow-3: rgba(20, 130, 110, 0.22);
+        --surface: rgba(28, 28, 30, 0.72);
+        --surface-2: rgba(118, 118, 128, 0.24);
+        --border: rgba(84, 84, 88, 0.45);
+        --text: #f5f5f7;
+        --text-2: #a1a1a6;
+        --accent: #0a84ff;
+        --accent-hover: #409cff;
+        --danger: #ff453a;
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #1c1c1e;
+      --glow-1: rgba(40, 90, 200, 0.35);
+      --glow-2: rgba(160, 50, 120, 0.25);
+      --glow-3: rgba(20, 130, 110, 0.22);
+      --surface: rgba(28, 28, 30, 0.72);
+      --surface-2: rgba(118, 118, 128, 0.24);
+      --border: rgba(84, 84, 88, 0.45);
+      --text: #f5f5f7;
+      --text-2: #a1a1a6;
+      --accent: #0a84ff;
+      --accent-hover: #409cff;
+      --danger: #ff453a;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; }
+    body {
+      display: flex; flex-direction: column;
+      font-family: var(--font); font-size: 15px; line-height: 1.45;
+      color: var(--text); background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    /* Weiche Farbflächen hinter dem Glas, wie im Portal (sichtbar beim Laden). */
+    body::before {
+      content: ""; position: fixed; inset: -20vmax; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(40vmax 40vmax at 15% 10%, var(--glow-1), transparent 70%),
+        radial-gradient(35vmax 35vmax at 90% 20%, var(--glow-2), transparent 70%),
+        radial-gradient(45vmax 45vmax at 60% 100%, var(--glow-3), transparent 70%);
+      filter: blur(20px);
+    }
+    :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 2px; }
+
+    /* ---------- Titelleiste (wie .topbar im Portal und die Kopfleiste im Hausbuch) ---------- */
+    .topbar {
+      flex: none; position: relative; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      height: 48px;
+      padding: 0 max(12px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+      background: color-mix(in srgb, var(--bg) 60%, transparent);
+      backdrop-filter: blur(20px) saturate(1.8); -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px; min-width: 0;
+      color: var(--text);
+      font-weight: 600; font-size: 17px; letter-spacing: -0.01em;
+    }
+    .brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .glyph {
+      flex: none; width: 28px; height: 28px; border-radius: 22.5%;
+      display: grid; place-items: center; color: #fff;
+      background: linear-gradient(160deg, #ff8a80, #d70015); /* .c-red im Portal */
+      box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .25), 0 2px 6px rgba(0, 0, 0, .15);
+    }
+    .glyph svg { width: 62%; height: 62%; }
+    .glyph.large { width: 72px; height: 72px; box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .25), 0 4px 12px rgba(0, 0, 0, .15); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 32px; padding: 0 14px; border: 0; border-radius: 980px;
+      font: inherit; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap;
+      color: var(--accent); background: none; cursor: pointer;
+      transition: background .2s var(--ease-out), transform .25s var(--ease-spring);
+    }
+    .btn:hover { background: var(--surface-2); }
+    .btn:active { transform: scale(.96); transition-duration: .08s; }
+    .btn svg { width: 18px; height: 18px; flex: none; }
+    .btn.primary { color: #fff; background: var(--accent); min-height: 40px; padding: 0 18px; font-size: 15px; }
+    .btn.primary:hover { background: var(--accent-hover); }
+    @media (max-width: 480px) { .topbar .btn .label { display: none; } .topbar .btn { padding: 0 8px; } }
+
+    /* ---------- Arbeitsfläche ---------- */
+    .stage { flex: 1; min-height: 0; position: relative; }
+    #app { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .35s var(--ease-out); }
+    #app.ready { opacity: 1; }
+
+    /* ---------- Ladeanzeige (wie .auth-card im Portal) ---------- */
+    #loading { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px 16px; }
+    .card {
+      width: 100%; max-width: 360px; padding: 36px 28px 30px; text-align: center;
+      background: var(--surface); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6);
+      border: 1px solid var(--border); border-radius: 28px; box-shadow: var(--shadow-lg);
+      animation: card-in .5s var(--ease-out) both;
+    }
+    @keyframes card-in { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+    .card .glyph { margin: 0 auto; }
+    .card h1 { margin: 18px 0 4px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+    .card p { margin: 0; color: var(--text-2); }
+    .card .error { margin-top: 14px; color: var(--danger); font-size: 14px; white-space: pre-wrap; text-align: left; overflow-wrap: anywhere; }
+    .card .btn.primary { margin-top: 20px; width: 100%; }
+    /* Aktivitätsanzeige im Stil von iOS */
+    .spinner { width: 22px; height: 22px; margin: 20px auto 0; border-radius: 50%;
+      border: 2.5px solid var(--surface-2); border-top-color: var(--text-2); animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading.failed .spinner { display: none; }
+    #loading.done { opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+
+    [hidden] { display: none !important; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+      .spinner { animation: spin 1.6s linear infinite !important; }
+    }
   </style>
 </head>
 <body>
-  <canvas id="app"></canvas>
-  <div id="loading">PDF Webeditor wird geladen…</div>
+  <!-- Dokument-Symbol der App (Kopfleiste, Ladeanzeige). -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>
+    </symbol>
+  </svg>
 
+  <header class="topbar">
+    <!-- Kein Link: ein Klick würde die App neu laden und offene Dokumente verwerfen. -->
+    <div class="brand">
+      <span class="glyph" aria-hidden="true"><svg><use href="#i-doc"/></svg></span>
+      <span>PDF Webeditor</span>
+    </div>
+    <!-- Nur hinter dem Portal (philippzent.com): zurück zur Übersicht, wie „Zum Portal“ im Hausbuch. -->
+    <a class="btn" id="portal" href="https://philippzent.com/" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/>
+        <rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>
+      </svg>
+      <span class="label">Zum Portal</span>
+    </a>
+  </header>
+
+  <main class="stage">
+    <canvas id="app"></canvas>
+    <div id="loading" role="status" aria-live="polite">
+      <div class="card">
+        <span class="glyph large" aria-hidden="true"><svg><use href="#i-doc"/></svg></span>
+        <h1>PDF Webeditor</h1>
+        <p id="loading-text">Wird geladen …</p>
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="error" id="loading-error" hidden></p>
+        <button class="btn primary" id="reload" type="button" hidden>Neu laden</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Hinter dem Portal führt ein Knopf zurück; eigenständig (z. B. Vercel) bleibt er verborgen.
+    if (/(^|\.)philippzent\.com$/.test(location.hostname)) {
+      document.getElementById("portal").hidden = false;
+    }
+  </script>
   <script>
     // Texterkennung (OCR) für die App: PDF Tool ruft window.pdftoolOcr auf (PDF-Tool app::ocr_ui::web)
     // und bekommt Tesseracts TSV-Tabelle zurück. tesseract.js, die Erkennung (WebAssembly) und die
@@ -77,22 +263,45 @@
     import init, { initialize_pdfium_render, start } from "./pkg/pdf_webeditor.js?v=__BUILD__";
     console.info("PDF Webeditor, Build __BUILD__");
 
+    // Oberflächenschrift Inter (scripts/fetch-ui-font.sh). Fehlt sie, startet die App mit der
+    // eingebauten egui-Schrift – kein Grund, den Start scheitern zu lassen.
+    async function loadUiFont() {
+      try {
+        const res = await fetch("fonts/ui/Inter-Regular.ttf?v=__BUILD__");
+        if (!res.ok) throw new Error(res.status + " " + res.statusText);
+        return new Uint8Array(await res.arrayBuffer());
+      } catch (e) {
+        console.warn("Inter konnte nicht geladen werden:", e);
+        return undefined;
+      }
+    }
+
     const loading = document.getElementById("loading");
+    const canvas = document.getElementById("app");
     try {
-      // Beide WebAssembly-Module parallel laden: PDFium (C++) und unsere App (Rust).
-      const [pdfium, rust] = await Promise.all([PDFiumModule(),
+      // Alles parallel laden: PDFium (C++), unsere App (Rust) und die Schrift.
+      const [pdfium, rust, uiFont] = await Promise.all([PDFiumModule(),
         init({ module_or_path: "./pkg/pdf_webeditor_bg.wasm?v=__BUILD__" }),
+        loadUiFont(),
       ]);
       // Brücke herstellen: pdfium-render ruft PDFium-Funktionen über dieses Modul-Objekt auf.
       if (!initialize_pdfium_render(pdfium, rust, false)) {
         throw new Error("initialize_pdfium_render ist fehlgeschlagen (Details in der Konsole)");
       }
-      loading.remove();
-      await start("app");
+      await start("app", uiFont);
+      canvas.classList.add("ready");
+      loading.classList.add("done");
+      setTimeout(() => loading.remove(), 300);
     } catch (e) {
       console.error(e);
-      loading.classList.add("error");
-      loading.textContent = "Start fehlgeschlagen:\n" + e;
+      loading.classList.add("failed");
+      document.getElementById("loading-text").textContent = "Start fehlgeschlagen";
+      const error = document.getElementById("loading-error");
+      error.textContent = String(e);
+      error.hidden = false;
+      const reload = document.getElementById("reload");
+      reload.hidden = false;
+      reload.onclick = () => location.reload();
     }
   </script>
 </body>
