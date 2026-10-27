@@ -67,12 +67,12 @@ Der Webeditor sieht aus wie das [Portal](https://github.com/philge2001/portal) u
 
 - `web/index.html`: Titelleiste mit App-Symbol und – nur unter philippzent.com – „Zum Portal“; Ladeanzeige als
   Glaskarte über den Farbflächen des Portals, mit Fehlermeldung und „Neu laden“, falls der Start scheitert.
-- `src/theme.rs`: legt nach `PdfToolApp::new` dieselben Farben, Radien, Schatten und Abstände über das Schema von
-  PDF Tool (hell und dunkel) und installiert Inter als UI-Schrift. Wählt man in der App hell/dunkel, folgt die
+- PDF-Tool (`app::style`, `app::icons`, `app::home`, Branch `ui-portal-design`) bringt Farben, Formen und Layout
+  selbst mit: Palette wie die CSS-Variablen des Portals, Pillen-Knöpfe, farbige Werkzeug-Symbole wie die
+  Seitenleiste im Hausbuch, Startseite wie die Portal-Startseite, „Alle Werkzeuge“ in Abschnitten.
+- `src/theme.rs`: Inter als UI-Schrift (nur im Browser) und `Themed`: wählt man in der App hell/dunkel, folgt die
   Titelleiste (`data-theme` an `<html>`).
 - `scripts/fetch-ui-font.sh` lädt Inter 4.1 (OFL) mit Prüfsumme nach `dist/fonts/ui/` (≈ 400 KB, parallel zur App).
-- Nicht erfasst: Flächen, die PDF Tool fest einfärbt (`app::style::canvas`, `floating_fill`, `border` – Hintergrund
-  hinter den Seiten, schwebende Leisten, Kacheln der Startseite). Die ändern sich nur in PDF-Tool selbst.
 
 ## W6 – Texterkennung (OCR)
 

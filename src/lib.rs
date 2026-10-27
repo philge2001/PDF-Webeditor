@@ -1,8 +1,8 @@
 //! PDF Webeditor – PDF Tool im Browser.
 //!
 //! Die Oberfläche ist dieselbe wie in der Desktop-App: [`pdftool_app::PdfToolApp`] aus dem
-//! PDF-Tool-Repository. Hier passiert nur der Start im `<canvas>` der Webseite – mit dem
-//! Erscheinungsbild von Portal und Hausbuch (Modul `theme`).
+//! PDF-Tool-Repository. Hier passiert nur der Start im `<canvas>` der Webseite, dazu die
+//! Oberflächenschrift Inter und der Abgleich hell/dunkel mit der Seite (Modul `theme`).
 //! Der Code läuft nur im Browser (`wasm32`); auf dem Host bleibt die Bibliothek leer.
 
 #[cfg(target_arch = "wasm32")]
@@ -40,9 +40,8 @@ mod web_entry {
                 eframe::WebOptions::default(),
                 // Keine Startdateien und kein Vergleich – im Browser öffnet man über die Oberfläche.
                 Box::new(|cc| {
+                    // Farben und Formen wie Portal/Hausbuch bringt PDF Tool selbst mit (`app::style`).
                     let app = pdftool_app::PdfToolApp::new(cc, Vec::new(), None);
-                    // Erst nach `new`: PDF Tool setzt dort sein eigenes Schema, unseres kommt darüber.
-                    crate::theme::install(&cc.egui_ctx);
                     if let Some(ttf) = ui_font {
                         crate::theme::install_ui_font(&cc.egui_ctx, ttf);
                     }

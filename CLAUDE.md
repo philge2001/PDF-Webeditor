@@ -22,10 +22,11 @@ wasm-bindgen-cli muss exakt zur `wasm-bindgen`-Version in Cargo.toml passen (bui
 - `web/index.html` lädt `pdfium/pdfium.js` (`PDFiumModule()`, Emscripten modularisiert) und `pkg/pdf_webeditor.js`
   (wasm-bindgen), ruft `initialize_pdfium_render(pdfium, rust, false)` und dann `start("app", uiFont)`.
 - `src/lib.rs` – `start(canvas_id, ui_font)`: Panic-Hook, tracing → Browser-Konsole (tracing-wasm), `eframe::WebRunner` mit
-  `PdfToolApp::new(cc, Vec::new(), None)`, danach `theme::install` (Farben/Radien wie Portal und Hausbuch) und Inter
-  als UI-Schrift; `theme::Themed` umhüllt die App und setzt `data-theme` an `<html>` (Titelleiste folgt hell/dunkel).
+  `PdfToolApp::new(cc, Vec::new(), None)`, danach Inter als UI-Schrift (`theme::install_ui_font`);
+  `theme::Themed` umhüllt die App und setzt `data-theme` an `<html>` (Titelleiste folgt hell/dunkel).
 - Gestaltung: Portal (github.com/philge2001/portal, `public/css/style.css`) und Hausbuch (vermietung,
-  `app/globals.css`) sind die Vorlage. Farben in `web/index.html` (CSS-Variablen) und `src/theme.rs` gleich halten.
+  `app/globals.css`) sind die Vorlage. Farben der App stehen in PDF-Tool `app::style::Palette`; die CSS-Variablen
+  in `web/index.html` (Titelleiste, Ladeanzeige) damit gleich halten.
 
 ## Abhängigkeiten
 Wie in PDF-Tool: keine AGPL, jede neue Crate mit einem Satz begründen.
