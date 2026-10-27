@@ -70,8 +70,10 @@ Der Webeditor sieht aus wie das [Portal](https://github.com/philge2001/portal) u
 - PDF-Tool (`app::style`, `app::icons`, `app::home`, Branch `ui-portal-design`) bringt Farben, Formen und Layout
   selbst mit: Palette wie die CSS-Variablen des Portals, Pillen-Knöpfe, farbige Werkzeug-Symbole wie die
   Seitenleiste im Hausbuch, Startseite wie die Portal-Startseite, „Alle Werkzeuge“ in Abschnitten.
-- `src/theme.rs`: Inter als UI-Schrift (nur im Browser) und `Themed`: wählt man in der App hell/dunkel, folgt die
-  Titelleiste (`data-theme` an `<html>`).
+- `src/theme.rs`: Inter als UI-Schrift (nur im Browser) und `Shared`: Darstellung (Hell, Dämmerung, Dunkel, System)
+  im Cookie `pz_theme` für die ganze Domain philippzent.com – dasselbe Cookie wie im Portal und im Hausbuch. Die Wahl
+  gilt also in allen drei Apps; eine woanders geänderte Wahl übernimmt der Editor beim nächsten Bild. `web/index.html`
+  liest das Cookie vor dem ersten Zeichnen (Titelleiste, Ladeanzeige) und gibt es an `start()` weiter.
 - `scripts/fetch-ui-font.sh` lädt Inter 4.1 (OFL) mit Prüfsumme nach `dist/fonts/ui/` (≈ 400 KB, parallel zur App).
 
 ## W6 – Texterkennung (OCR)

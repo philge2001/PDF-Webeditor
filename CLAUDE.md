@@ -20,10 +20,12 @@ wasm-bindgen-cli muss exakt zur `wasm-bindgen`-Version in Cargo.toml passen (bui
   danach `rev` hier hochziehen. Lokal testen: `[patch."https://github.com/philge2001/PDF-Tool"]` mit `path` für
   pdftool-app, -core, -render, -sign (nicht committen).
 - `web/index.html` lädt `pdfium/pdfium.js` (`PDFiumModule()`, Emscripten modularisiert) und `pkg/pdf_webeditor.js`
-  (wasm-bindgen), ruft `initialize_pdfium_render(pdfium, rust, false)` und dann `start("app", uiFont)`.
-- `src/lib.rs` – `start(canvas_id, ui_font)`: Panic-Hook, tracing → Browser-Konsole (tracing-wasm), `eframe::WebRunner` mit
+  (wasm-bindgen), ruft `initialize_pdfium_render(pdfium, rust, false)` und dann `start("app", uiFont, theme)`.
+- `src/lib.rs` – `start(canvas_id, ui_font, theme)`: Panic-Hook, tracing → Browser-Konsole (tracing-wasm), `eframe::WebRunner` mit
   `PdfToolApp::new(cc, Vec::new(), None)`, danach Inter als UI-Schrift (`theme::install_ui_font`);
-  `theme::Themed` umhüllt die App und setzt `data-theme` an `<html>` (Titelleiste folgt hell/dunkel).
+  `theme::Shared` umhüllt die App: Darstellung aus dem Cookie `pz_theme` (geteilt mit Portal und Hausbuch, Domain
+  philippzent.com), schreibt es bei Änderungen in der App, übernimmt woanders geänderte Werte und setzt
+  `data-theme` (light/dusk/dark) an `<html>`.
 - Gestaltung: Portal (github.com/philge2001/portal, `public/css/style.css`) und Hausbuch (vermietung,
   `app/globals.css`) sind die Vorlage. Farben der App stehen in PDF-Tool `app::style::Palette`; die CSS-Variablen
   in `web/index.html` (Titelleiste, Ladeanzeige) damit gleich halten.

@@ -15,7 +15,7 @@ crate-type = ["cdylib", "rlib"]
 # Die komplette Oberfläche aus dem Desktop-Projekt (eine Codebasis für beide Versionen),
 # ohne Texterkennung (Tesseract lässt sich nicht für den Browser bauen, siehe W6).
 # Fester Commit, damit Builds reproduzierbar bleiben; bei Bedarf bewusst hochziehen.
-pdftool-app = { git = "https://github.com/philge2001/PDF-Tool", rev = "1002cd9d0202116853328e1c60e90a90de6bad2b", default-features = false }
+pdftool-app = { git = "https://github.com/philge2001/PDF-Tool", rev = "f2a6cfcfe45570b11dc7db85436916048785d023", default-features = false }
 # egui im Browser (WebGL über glow), dieselbe Version wie die Desktop-App.
 eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "persistence"] }
 
@@ -23,7 +23,8 @@ eframe = { version = "0.37", default-features = false, features = ["default_font
 # Muss exakt zur installierten wasm-bindgen-cli passen (scripts/build.sh prüft das).
 wasm-bindgen = "=0.2.129"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlCanvasElement"] }
+# HtmlDocument + Location: Cookie pz_theme lesen/schreiben (Darstellung, geteilt mit Portal und Hausbuch).
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlCanvasElement", "HtmlDocument", "Location"] }
 # Panics als lesbare Meldung in der Browser-Konsole.
 console_error_panic_hook = "0.1"
 # Log-Meldungen der App (tracing) in die Browser-Konsole – MIT/Apache.
