@@ -1,47 +1,12 @@
 #!/usr/bin/env bash
-# Build auf Vercel (oder einem anderen Rechner ohne Rust): installiert die Werkzeuge in .tools/
-# und ruft dann scripts/build.sh auf. Vercel bringt nur Node mit – kein Rust, kein wasm-bindgen.
-#   Vercel: Build Command = bash scripts/vercel-build.sh, Output Directory = dist (siehe vercel.json)
+# Vercel provides rustup; never execute an unverified network installer.
 set -euo pipefail
-
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-TOOLS="$ROOT/.tools"
-mkdir -p "$TOOLS/bin"
-export PATH="$TOOLS/bin:${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
-
-# C-Compiler (Linker für Build-Skripte und Makros der Rust-Abhängigkeiten).
-if ! command -v cc >/dev/null; then
-  echo "Installiere gcc …"
-  dnf install -y gcc >/dev/null
-fi
-
-# Rust: immer die aktuelle stabile Version über rustup. Vercel bringt zwar Rust mit, aber eine ältere
-# Fassung (1.92) – egui 0.37 braucht mindestens 1.95.
-if ! command -v rustup >/dev/null; then
-  echo "Installiere rustup …"
-  curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none --no-modify-path
-fi
-rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown
-rustup default stable
-hash -r # die Shell soll cargo/rustc neu suchen (jetzt aus ~/.cargo/bin)
-echo "$(rustc --version), $(command -v cargo)"
-
-# wasm-bindgen-cli als fertiges Programm (exakt die Version aus Cargo.toml; cargo install bräuchte ~5 min).
-WB="$(grep -oP 'wasm-bindgen = "=\K[0-9.]+' Cargo.toml)"
-if [[ "$(wasm-bindgen --version 2>/dev/null | awk '{print $2}')" != "$WB" ]]; then
-  echo "Lade wasm-bindgen $WB …"
-  curl -fsSL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$WB/wasm-bindgen-$WB-x86_64-unknown-linux-musl.tar.gz" |
-    tar -xz -C "$TOOLS" --strip-components=1
-  mv "$TOOLS/wasm-bindgen" "$TOOLS/bin/"
-fi
-
-# wasm-opt (binaryen) – macht das WebAssembly rund ein Drittel kleiner.
-if ! command -v wasm-opt >/dev/null; then
-  echo "Lade binaryen …"
-  curl -fsSL https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz |
-    tar -xz -C "$TOOLS"
-  ln -sf "$TOOLS/binaryen-version_123/bin/wasm-opt" "$TOOLS/bin/wasm-opt"
-fi
-
+export PATH="$ROOT/.tools/bin:${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+command -v cc >/dev/null || { echo "Install a C compiler in the build image" >&2; exit 1; }
+command -v rustup >/dev/null || { echo "Provision rustup in the trusted build image" >&2; exit 1; }
+# rust-toolchain.toml selects the exact compiler without changing the global default.
+rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
+bash scripts/install-build-tools.sh
 bash scripts/build.sh
