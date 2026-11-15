@@ -45,10 +45,8 @@ if ($Have -ne $Want) {
 $PdfiumVersion = "7902"
 $Vendor = Join-Path $Root "vendor\pdfium"
 $VersionFile = Join-Path $Vendor "VERSION"
-if ((Test-Path (Join-Path $Vendor "pdfium.wasm")) -and (Test-Path $VersionFile) -and
-    ((Get-Content $VersionFile -Raw).Trim() -eq $PdfiumVersion)) {
-    Write-Host "PDFium $PdfiumVersion liegt schon in $Vendor"
-} else {
+# Always verify the release archive; a VERSION file does not authenticate cached code.
+& {
     $Tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("pdfwebeditor-pdfium-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Force $Tmp | Out-Null
     try {
@@ -56,6 +54,7 @@ if ((Test-Path (Join-Path $Vendor "pdfium.wasm")) -and (Test-Path $VersionFile) 
         $Url = "https://github.com/paulocoutinhox/pdfium-lib/releases/download/$PdfiumVersion/wasm.tgz"
         Write-Host "Lade $Url"
         Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", (Join-Path $Tmp "wasm.tgz"), $Url)
+        if ((Get-FileHash -Algorithm SHA256 (Join-Path $Tmp "wasm.tgz")).Hash.ToLower() -ne "153871da7e958a9440c84648eb45ddd9ad603efda9fcd8f021766dba5a9157a2") { throw "PDFium checksum mismatch" }
         Invoke-Tool "tar.exe" @("-xzf", (Join-Path $Tmp "wasm.tgz"), "-C", $Tmp)
 
         if (Test-Path $Vendor) { Remove-Item -Recurse -Force $Vendor }
@@ -66,9 +65,10 @@ if ((Test-Path (Join-Path $Vendor "pdfium.wasm")) -and (Test-Path $VersionFile) 
 
         # Lizenztexte: pdfium-lib (MIT) und PDFium samt Drittbibliotheken (aus dem bblanchon-Paket).
         Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", (Join-Path $Lic "pdfium-lib.md"),
-            "https://raw.githubusercontent.com/paulocoutinhox/pdfium-lib/master/LICENSE.md")
+            "https://raw.githubusercontent.com/paulocoutinhox/pdfium-lib/a566bd4c30f420c88b86a3a9d160268bcc828ea9/LICENSE.md")
         Invoke-Tool "curl.exe" @("-fsSL", "--retry", "3", "-o", (Join-Path $Tmp "bb.tgz"),
             "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F7881/pdfium-wasm.tgz")
+        if ((Get-FileHash -Algorithm SHA256 (Join-Path $Tmp "bb.tgz")).Hash.ToLower() -ne "added6e8ac024f71cb61cf2b77a205d178e2bdde2e4048fbcd916f68b7264d56") { throw "PDFium license archive checksum mismatch" }
         Invoke-Tool "tar.exe" @("-xzf", (Join-Path $Tmp "bb.tgz"), "-C", $Tmp, "licenses")
         Copy-Item (Join-Path $Tmp "licenses\*") $Lic
 
@@ -188,7 +188,7 @@ if ((Test-Path $OcrStampFile) -and ((Get-Content $OcrStampFile -Raw).Trim() -eq 
 
 # --- Rust → WebAssembly ---
 $BuildProfile = if ($Dev) { "debug" } else { "release" }
-$CargoArgs = @("build", "--target", "wasm32-unknown-unknown")
+$CargoArgs = @("build", "--locked", "--target", "wasm32-unknown-unknown")
 if (-not $Dev) { $CargoArgs += "--release" }
 Invoke-Tool "cargo" $CargoArgs
 

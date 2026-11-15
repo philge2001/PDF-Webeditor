@@ -27,7 +27,7 @@ bash scripts/fetch-pdfium.sh
 bash scripts/fetch-fonts.sh
 bash scripts/fetch-ui-font.sh
 bash scripts/fetch-tesseract.sh
-cargo build "${CARGO_FLAGS[@]}" --target wasm32-unknown-unknown
+cargo build --locked "${CARGO_FLAGS[@]}" --target wasm32-unknown-unknown
 
 rm -rf dist
 mkdir -p dist/pkg dist/pdfium

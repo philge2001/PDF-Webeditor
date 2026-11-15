@@ -12,17 +12,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: 1.95.0
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: wasm-bindgen-cli installieren
+      - name: Reject corrupt build downloads
+        run: bash scripts/test-build-integrity.sh
+      - name: Install verified build tools
         run: |
-          VERSION="$(grep -oP 'wasm-bindgen = "=\K[0-9.]+' Cargo.toml)"
-          cargo install wasm-bindgen-cli --version "$VERSION" --locked
-      - name: wasm-opt (binaryen) installieren
-        run: |
-          curl -fsSL https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-linux.tar.gz | tar xz
-          echo "$PWD/binaryen-version_123/bin" >> "$GITHUB_PATH"
+          bash scripts/install-build-tools.sh
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: bash scripts/build.sh
